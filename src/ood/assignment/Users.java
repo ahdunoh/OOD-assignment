@@ -510,16 +510,14 @@ public class Users {
             JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (Managing Staff)", JLabel.CENTER);
             welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
             
-            JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
+            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
             
             JButton userManagementButton = new JButton("User Management");
-            JButton carManagementButton = new JButton("Car Management");
             JButton dataAnalysisButton = new JButton("Data Analysis");
             JButton updateProfileButton = new JButton("Update Profile");
             JButton logoutButton = new JButton("Logout");
             
             buttonPanel.add(userManagementButton);
-            buttonPanel.add(carManagementButton);
             buttonPanel.add(dataAnalysisButton);
             buttonPanel.add(updateProfileButton);
             buttonPanel.add(logoutButton);
@@ -543,15 +541,13 @@ public class Users {
             userManagementFrame.setSize(400, 300);
             userManagementFrame.setLayout(new BorderLayout());
             
-            JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
+            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
             
-            JButton addUserButton = new JButton("Add User");
             JButton deleteUserButton = new JButton("Delete User");
             JButton updateUserButton = new JButton("Update User");
             JButton searchUserButton = new JButton("Search User");
             JButton backButton = new JButton("Back to main menu");
             
-            buttonPanel.add(addUserButton);
             buttonPanel.add(deleteUserButton);
             buttonPanel.add(updateUserButton);
             buttonPanel.add(searchUserButton);
@@ -559,94 +555,12 @@ public class Users {
             
             userManagementFrame.add(buttonPanel, BorderLayout.CENTER);
             
-            addUserButton.addActionListener(e -> approveUser());
             deleteUserButton.addActionListener(e -> deleteUser());
             updateUserButton.addActionListener(e -> updateUser());
             searchUserButton.addActionListener(e -> searchUser());
             backButton.addActionListener(e -> userManagementFrame.dispose());
             
             userManagementFrame.setVisible(true);
-        }
-
-        private void approveUser() {
-            JFrame approveFrame = new JFrame("Approve Users");
-            approveFrame.setSize(500, 400);
-            approveFrame.setLayout(new BorderLayout());
-            
-            JTextArea userTextArea = new JTextArea();
-            userTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(userTextArea);
-            
-            JPanel inputPanel = new JPanel();
-            JTextField usernameField = new JTextField(15);
-            JButton approveButton = new JButton("Approve Selected");
-            
-            inputPanel.add(new JLabel("Username:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(approveButton);
-            
-            try {
-                List<String> usersApproval = Files.readAllLines(Paths.get("approval.txt"));
-                for (String user : usersApproval) {
-                    userTextArea.append(user + "\n");
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(approveFrame, "Error reading approval file");
-            }
-            
-            approveFrame.add(scrollPane, BorderLayout.CENTER);
-            approveFrame.add(inputPanel, BorderLayout.SOUTH);
-            
-            approveButton.addActionListener(e -> {
-                String username = usernameField.getText();
-                if (username.isEmpty()) {
-                    JOptionPane.showMessageDialog(approveFrame, "Please enter a username");
-                    return;
-                }
-                
-                File fileCredentials = new File("credentials.txt");
-                File fileApproval = new File("approval.txt");
-                File tempFileC = new File("tempc.txt");
-                File tempFileA = new File("tempa.txt");
-
-                try {
-                    List<String> usersApproval = Files.readAllLines(fileApproval.toPath());
-                    List<String> credentialsLines = Files.readAllLines(fileCredentials.toPath());
-                    
-                    // Process credentials file
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFileC))) {
-                        for (String line : credentialsLines) {
-                            String[] credentials = line.split(", ");
-                            if (credentials.length > 3 && credentials[3].equals("customer") && credentials[1].equals(username)) {
-                                line = line.replace(", notApprove", "").replace("notApprove", "");
-                            }
-                            writer.write(line);
-                            writer.newLine();
-                        }
-                    }
-                    
-                    // Process approval file
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFileA))) {
-                        for (String line : usersApproval) {
-                            if (!line.trim().equals(username.trim())) {
-                                writer.write(line);
-                                writer.newLine();
-                            }
-                        }
-                    }
-                    
-                    // Replace original files
-                    Files.move(tempFileC.toPath(), fileCredentials.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    Files.move(tempFileA.toPath(), fileApproval.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    
-                    JOptionPane.showMessageDialog(approveFrame, "User approved successfully");
-                    approveFrame.dispose();
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(approveFrame, "Error processing files: " + ex.getMessage());
-                }
-            });
-            
-            approveFrame.setVisible(true);
         }
         
         private void deleteUser() {
@@ -1319,14 +1233,10 @@ public class Users {
 
             JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
 
-            JButton addCarButton = new JButton("Add New Car");
-            JButton updateCarButton = new JButton("Update Car Status");
             JButton viewSalesButton = new JButton("View Sales Records");
             JButton updateProfileButton = new JButton("Update Profile");
             JButton logoutButton = new JButton("Logout");
 
-            buttonPanel.add(addCarButton);
-            buttonPanel.add(updateCarButton);
             buttonPanel.add(viewSalesButton);
             buttonPanel.add(updateProfileButton);
             buttonPanel.add(logoutButton);
@@ -1342,130 +1252,6 @@ public class Users {
             });
 
             currentFrame.setVisible(true);
-        }
-
-        private void addCar() {
-            JFrame addCarFrame = new JFrame("Add New Car");
-            addCarFrame.setSize(400, 400);
-            addCarFrame.setLayout(new GridLayout(8, 2, 10, 10));
-            
-            JLabel modelLabel = new JLabel("Car Model:");
-            JTextField modelField = new JTextField();
-            
-            JLabel yearLabel = new JLabel("Year Made (1900-2025):");
-            JTextField yearField = new JTextField();
-            
-            JLabel priceLabel = new JLabel("Price:");
-            JTextField priceField = new JTextField();
-            
-            JLabel statusLabel = new JLabel("Status:");
-            JComboBox<String> statusCombo = new JComboBox<>(new String[]{"available", "booked", "paid", "cancelled"});
-            
-            JButton submitButton = new JButton("Submit");
-            JButton cancelButton = new JButton("Cancel");
-            
-            addCarFrame.add(modelLabel);
-            addCarFrame.add(modelField);
-            addCarFrame.add(yearLabel);
-            addCarFrame.add(yearField);
-            addCarFrame.add(priceLabel);
-            addCarFrame.add(priceField);
-            addCarFrame.add(statusLabel);
-            addCarFrame.add(statusCombo);
-            addCarFrame.add(submitButton);
-            addCarFrame.add(cancelButton);
-            
-            File carStatus = new File("carStatus.txt");
-            File carApproval = new File("carApproval.txt");
-
-            try {
-                if (!carStatus.exists()) {
-                    carStatus.createNewFile();
-                }
-                if (!carApproval.exists()) {
-                    carApproval.createNewFile();
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(addCarFrame, "Error creating files: " + e.getMessage());
-            }
-            
-            submitButton.addActionListener(e -> {
-                String model = modelField.getText();
-                if (model.isEmpty()) {
-                    JOptionPane.showMessageDialog(addCarFrame, "Please enter a model");
-                    return;
-                }
-                
-                int year;
-                try {
-                    year = Integer.parseInt(yearField.getText());
-                    if (year < 1900 || year > 2025) {
-                        JOptionPane.showMessageDialog(addCarFrame, "Year must be between 1900 and 2025!");
-                        return;
-                    }
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(addCarFrame, "Invalid year! Please enter a number.");
-                    return;
-                }
-                
-                double price;
-                try {
-                    price = Double.parseDouble(priceField.getText());
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(addCarFrame, "Invalid price! Please enter a number.");
-                    return;
-                }
-                
-                String status = (String) statusCombo.getSelectedItem();
-                String seller = this.getUsername();
-                String approve = "notApprove";
-                
-                // Generate next carID
-                int maxId = 0;
-                try (BufferedReader reader = new BufferedReader(new FileReader(carStatus))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        String[] parts = line.split(", ");
-                        if (parts.length > 0) {
-                            String carId = parts[0];
-                            if (carId.startsWith("C")) {
-                                try {
-                                    int num = Integer.parseInt(carId.substring(1));
-                                    if (num > maxId) {
-                                        maxId = num;
-                                    }
-                                } catch (NumberFormatException ex) {
-                                    JOptionPane.showMessageDialog(addCarFrame, "Invalid CarID format: " + carId);
-                                }
-                            }
-                        }
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(addCarFrame, "Error reading car status file: " + ex.getMessage());
-                }
-                
-                String nextCarId = String.format("C%02d", maxId + 1);
-                
-                String newEntry = String.format("%s, %s, %d, %.2f, %s, %s, %s",
-                    nextCarId, model, year, price, status, seller, approve);
-                
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(carStatus, true));
-                     BufferedWriter writerA = new BufferedWriter(new FileWriter(carApproval, true))) {
-                    writer.write(newEntry);
-                    writer.newLine();
-                    if (approve.equals("notApprove")) {
-                        writerA.write(model);
-                        writerA.newLine();
-                    }
-                    JOptionPane.showMessageDialog(addCarFrame, "New car added with ID: " + nextCarId);
-                    addCarFrame.dispose();
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(addCarFrame, "Error writing to file: " + ex.getMessage());
-                }
-            });
-            
-            cancelButton.addActionListener(e -> addCarFrame.dispose());
-            addCarFrame.setVisible(true);
         }
 
         private void paymentAnalysis() {
@@ -1606,15 +1392,7 @@ public class Users {
                 }
 
                 FileWriter fileWriter = new FileWriter(credentialsFile, true);
-                FileWriter approvalWriter = new FileWriter("approval.txt", true);
-                if (role.equalsIgnoreCase("customer")) {
-                    fileWriter.write(email + ", " + username + ", " + password + ", " + role + ", notApprove\n");
-                    approvalWriter.write(username + "\n");
-                } else {
-                    fileWriter.write(email + ", " + username + ", " + password + ", " + role + "\n");
-                }
                 fileWriter.close();
-                approvalWriter.close();
                 JOptionPane.showMessageDialog(signupFrame, "Account created successfully!");
                 signupFrame.dispose();
                 login();
@@ -1697,12 +1475,8 @@ public class Users {
                         ManagingStaff staff = new ManagingStaff(credentials[0], credentials[1], credentials[2], credentials[3]);
                         staff.userMenu();
                     } else if (credentials[3].equalsIgnoreCase("customer")) {
-                        if (credentials.length > 4) {
-                            JOptionPane.showMessageDialog(null, "You are NOT APPROVED yet");
-                        } else {
-                            Users user = new Users(credentials[0], credentials[1], credentials[2], credentials[3]);
-                            user.userMenu();
-                        }
+                        Users user = new Users(credentials[0], credentials[1], credentials[2], credentials[3]);
+                        user.userMenu();
                     } else if (credentials[3].equalsIgnoreCase("salesman")) {
                         Salesman salesman = new Salesman(credentials[0], credentials[1], credentials[2], credentials[3]);
                         salesman.userMenu();
@@ -1731,14 +1505,12 @@ public class Users {
 
         JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (" + getRole() + ")", JLabel.CENTER);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));  // Changed to 5 rows
-        JButton viewCarsButton = new JButton("View Available Cars");
+        JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));  // Changed to 5 rows
         JButton purchaseHistoryButton = new JButton("View Purchase History");
         JButton feedbackHistoryButton = new JButton("View Feedback History");
         JButton updateProfileButton = new JButton("Update Profile");
         JButton logoutButton = new JButton("Logout");
 
-        buttonPanel.add(viewCarsButton);
         buttonPanel.add(purchaseHistoryButton);
         buttonPanel.add(feedbackHistoryButton);
         buttonPanel.add(updateProfileButton);
