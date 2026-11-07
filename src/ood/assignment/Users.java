@@ -11,6 +11,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 public class Users {
     private String email;
@@ -1499,27 +1501,31 @@ public class Users {
     }
     
     public void userMenu() {
-        currentFrame = new JFrame("Customer Menu");
+        currentFrame = new JFrame("Student Menu");
         currentFrame.setSize(500, 400);  // Increased height to accommodate new buttons
         currentFrame.setLayout(new BorderLayout());
 
         JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (" + getRole() + ")", JLabel.CENTER);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));  // Changed to 5 rows
-        JButton purchaseHistoryButton = new JButton("View Purchase History");
-        JButton feedbackHistoryButton = new JButton("View Feedback History");
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));  // Changed to 5 rows
+        JButton classManagementButton = new JButton("Class Management");
+        JButton paymentManagementButton = new JButton("Payment Management");
+        JButton instructorRatingButton = new JButton("Instructor Ratings");
         JButton updateProfileButton = new JButton("Update Profile");
         JButton logoutButton = new JButton("Logout");
 
-        buttonPanel.add(purchaseHistoryButton);
-        buttonPanel.add(feedbackHistoryButton);
+        buttonPanel.add(classManagementButton);
+        buttonPanel.add(paymentManagementButton);
+        buttonPanel.add(instructorRatingButton);
         buttonPanel.add(updateProfileButton);
         buttonPanel.add(logoutButton);
 
         currentFrame.add(welcomeLabel, BorderLayout.NORTH);
         currentFrame.add(buttonPanel, BorderLayout.CENTER);
 
-        feedbackHistoryButton.addActionListener(e -> viewFeedbackHistory());
+        classManagementButton.addActionListener(e -> manageClass());
+        paymentManagementButton.addActionListener(e -> managePayment());
+        instructorRatingButton.addActionListener(e -> instructorRatings());
         updateProfileButton.addActionListener(e -> updateProfile());
         logoutButton.addActionListener(e -> {
             logout();
@@ -1527,6 +1533,274 @@ public class Users {
         });
 
         currentFrame.setVisible(true);
+    }
+    
+    private void manageClass() {
+            JFrame classManagementFrame = new JFrame("User Management");
+            classManagementFrame.setSize(400, 300);
+            classManagementFrame.setLayout(new BorderLayout());
+            
+            JPanel buttonPanel = new JPanel(new GridLayout(6, 1, 10, 10));
+            
+            JButton bookClassButton = new JButton("Book Classes");
+            JButton viewClassButton = new JButton("View Classes");
+            JButton searchClassButton = new JButton("Search Class");
+            JButton rescheduleClassButton = new JButton("Reschedule Class");
+            JButton cancelClassButton = new JButton("Cancel Class");
+            JButton backButton = new JButton("Back to main menu");
+            
+            buttonPanel.add(bookClassButton);
+            buttonPanel.add(viewClassButton);
+            buttonPanel.add(searchClassButton);
+            buttonPanel.add(rescheduleClassButton);
+            buttonPanel.add(cancelClassButton);
+            buttonPanel.add(backButton);
+            
+            classManagementFrame.add(buttonPanel, BorderLayout.CENTER);
+            
+            bookClassButton.addActionListener(e -> bookClass());
+            viewClassButton.addActionListener(e -> viewClass());
+            searchClassButton.addActionListener(e -> searchClass());
+            rescheduleClassButton.addActionListener(e -> rescheduleClass());
+            cancelClassButton.addActionListener(e -> cancelClass());
+            backButton.addActionListener(e -> classManagementFrame.dispose());
+            
+            classManagementFrame.setVisible(true);
+        }
+    
+    private void managePayment() {
+            JFrame paymentManagementFrame = new JFrame("User Management");
+            paymentManagementFrame.setSize(400, 300);
+            paymentManagementFrame.setLayout(new BorderLayout());
+            
+            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
+            
+            JButton makePaymentButton = new JButton("Make Payments");
+            JButton searchPaymentButton = new JButton("Search Payment");
+            JButton paymentHistoryButton = new JButton("View Payment History");
+            JButton backButton = new JButton("Back to main menu");
+            
+            buttonPanel.add(makePaymentButton);
+            buttonPanel.add(searchPaymentButton);
+            buttonPanel.add(paymentHistoryButton);
+            buttonPanel.add(backButton);
+            
+            paymentManagementFrame.add(buttonPanel, BorderLayout.CENTER);
+            
+            makePaymentButton.addActionListener(e -> makePayment());
+            searchPaymentButton.addActionListener(e -> searchPayment());
+            paymentHistoryButton.addActionListener(e -> paymentHistory());
+            backButton.addActionListener(e -> paymentManagementFrame.dispose());
+            
+            paymentManagementFrame.setVisible(true);
+        }
+    
+    private void instructorRatings() {
+            JFrame instructorRatingsFrame = new JFrame("User Management");
+            instructorRatingsFrame.setSize(400, 300);
+            instructorRatingsFrame.setLayout(new BorderLayout());
+            
+            JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+            
+            JButton addRatingButton = new JButton("Add Instructor Ratings");
+            JButton viewRatingButton = new JButton("View Instructor Ratings");
+            JButton backButton = new JButton("Back to main menu");
+            
+            buttonPanel.add(addRatingButton);
+            buttonPanel.add(viewRatingButton);
+            buttonPanel.add(backButton);
+            
+            instructorRatingsFrame.add(buttonPanel, BorderLayout.CENTER);
+            
+            addRatingButton.addActionListener(e -> addRating());
+            viewRatingButton.addActionListener(e -> viewRating());
+            backButton.addActionListener(e -> instructorRatingsFrame.dispose());
+            
+            instructorRatingsFrame.setVisible(true);
+        }
+    
+    private void bookClass(){
+        JFrame bookClassFrame = new JFrame("Book a Class");
+        bookClassFrame.setSize(650, 500);
+        bookClassFrame.setLayout(new BorderLayout());
+        
+        JTextArea classBookingArea = new JTextArea();
+        classBookingArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(classBookingArea);
+        
+        JPanel inputPanel = new JPanel(new FlowLayout());
+        JTextField classIdField = new JTextField(10);
+        JButton bookButton = new JButton("Book");
+        
+        inputPanel.add(new JLabel("Class ID to book: "));
+        inputPanel.add(classIdField);
+        inputPanel.add(bookButton);
+        
+        //Display all available classes
+        
+        
+    }
+    
+    private void viewClass(){
+        JFrame viewClassFrame = new JFrame("My Classes");
+        viewClassFrame.setSize(650, 450);
+        viewClassFrame.setLayout(new BorderLayout());
+        
+        JTextArea classViewArea = new JTextArea();
+        classViewArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(classViewArea);
+        
+        classViewArea.append("=== YOUR ENROLLED CLASSES ===\n");
+        classViewArea.append(String.format("%-8s %-20s %-15s %-20s %-8s%n",
+            "ClassID", "Class Name", "Instructor", "Schedule", "Status"));
+        classViewArea.append("--------------------------------------------------------------------------\n");
+    }
+    
+    private void searchClass(){
+        JFrame searchClassFrame = new JFrame("Search for Classes");
+        searchClassFrame.setSize(650, 450);
+        searchClassFrame.setLayout(new BorderLayout());
+        
+        JPanel top = new JPanel();
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Search");
+        top.add(new JLabel("Search by class name / instructor:"));
+        top.add(searchField);
+        top.add(searchButton);
+        
+        JTextArea classSearchArea = new JTextArea();
+        classSearchArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(classSearchArea);
+        
+        searchClassFrame.add(top, BorderLayout.NORTH);
+        searchClassFrame.add(scroll, BorderLayout.CENTER);
+    }
+    
+    private void rescheduleClass(){
+        JFrame rescheduleClassFrame = new JFrame("Reschedule Your Classes");
+        rescheduleClassFrame.setSize(500, 250);
+        rescheduleClassFrame.setLayout(new GridLayout(3, 2, 10, 10));
+        
+        JTextField oldIdField = new JTextField();
+        JTextField newIdField = new JTextField();
+        JButton confirm = new JButton("Reschedule");
+        JButton cancel = new JButton ("Cancel");
+        
+        rescheduleClassFrame.add(new JLabel("Current Class ID:"));
+        rescheduleClassFrame.add(oldIdField);
+        rescheduleClassFrame.add(new JLabel("New Class ID:"));
+        rescheduleClassFrame.add(newIdField);
+        rescheduleClassFrame.add(confirm);
+        rescheduleClassFrame.add(cancel);
+    }
+    
+    private void cancelClass(){
+        JFrame cancelClassFrame = new JFrame("Cancel Class");
+        cancelClassFrame.setSize(500, 200);
+        cancelClassFrame.setLayout(new GridLayout(2, 2, 10, 10));
+        
+        JTextField classIdField = new JTextField();
+        JButton cancelButton = new JButton("Cancel Enrollment");
+        
+        cancelClassFrame.add(new JLabel("Class ID to cancel:"));
+        cancelClassFrame.add(classIdField);
+
+    }
+    
+    private void makePayment(){
+        JFrame makePaymentFrame = new JFrame("Make Payment");
+        makePaymentFrame.setSize(500, 300);
+        makePaymentFrame.setLayout(new BorderLayout());
+        
+        JPanel inputPanel = new JPanel(new GridLayout(2, 3, 10, 10));
+        JTextField classIdField = new JTextField();
+        JTextField amountField = new JTextField();
+        JButton payButton = new JButton("Pay");
+        
+        inputPanel.add(new JLabel("Class ID:"));
+        inputPanel.add(classIdField);
+        inputPanel.add(new JLabel("Amount (RM):"));
+        inputPanel.add(amountField);
+        inputPanel.add(new JLabel(""));
+        inputPanel.add(payButton);
+        
+        JTextArea info = new JTextArea();
+        info.setEditable(false);
+        info.append("Your active enrollments:\n");
+    }
+    
+    private void searchPayment(){
+        JFrame frame = new JFrame("Search Payment");
+        frame.setSize(600, 400);
+        frame.setLayout(new BorderLayout());
+        
+        JPanel top = new JPanel();
+        JTextField searchField = new JTextField(15);
+        JButton searchButton = new JButton("Search");
+        top.add(new JLabel("Payment ID or Class ID:"));
+        top.add(searchField);
+        
+        JTextArea paymentSearchArea = new JTextArea();
+        paymentSearchArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(paymentSearchArea);
+        
+        frame.add(top, BorderLayout.NORTH);
+        frame.add(scroll, BorderLayout.CENTER);
+    }
+    
+    private void paymentHistory(){
+        JFrame paymentHistoryFrame = new JFrame("Your Payment History");
+        paymentHistoryFrame.setSize(650, 400);
+        paymentHistoryFrame.setLayout(new BorderLayout());
+
+        JTextArea paymentHistoryArea = new JTextArea();
+        paymentHistoryArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(paymentHistoryArea);
+        
+        paymentHistoryArea.append("=== YOUR PAYMENT HISTORY ===\n");
+        paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n", "PayID", "ClassID", "Amount", "Date", "Status"));
+        paymentHistoryArea.append("-----------------------------------------------------\\n");
+
+        
+    }
+    
+    private void addRating(){
+        JFrame addRatingFrame = new JFrame("Rate an Instructor");
+        addRatingFrame.setSize(500, 400);
+        addRatingFrame.setLayout(new BorderLayout());
+        
+        JPanel form = new JPanel(new GridLayout(5, 2, 10, 10));
+        
+        JTextField classIdField = new JTextField();
+        JComboBox<Integer> ratingCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5});
+        JTextArea commentArea = new JTextArea(4, 20);
+        JButton submit = new JButton("Submit Rating");
+        
+        form.add(new JLabel("Class ID (from your enrollments): "));
+        form.add(classIdField);
+        form.add(new JLabel("Rating (1-5):"));
+        form.add(ratingCombo);
+        form.add(new JLabel("Comment:"));
+        form.add(new JScrollPane(commentArea));
+        form.add(new JLabel(""));
+        form.add(submit);
+        
+        addRatingFrame.add(form, BorderLayout.CENTER);
+        
+        
+    }
+    
+    private void viewRating(){
+        JFrame viewRatingFrame = new JFrame("Your Feedback History");
+        viewRatingFrame.setSize(700, 400);
+        viewRatingFrame.setLayout(new BorderLayout());
+
+        JTextArea viewRatingArea = new JTextArea();
+        viewRatingArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(viewRatingArea);
+
+        viewRatingArea.append("=== YOUR SUBMITTED RATINGS ===\n");
+        viewRatingArea.append(String.format("%-8s %-10s %-15s %-10s %-8s %-25s %-12s%n", "RateID", "ClassID", "Instructor", "Rating", "/5", "Comment", "Date"));
     }
     
     private void leaveFeedback(String carId) {
