@@ -2,6 +2,22 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
+//Proposed text files format
+
+/*
+   Classes.txt:
+   (classID, className, instructor, schedule, capacity, enrolled, price)
+
+   enrollment.txt:
+   (username, classID, status)
+
+   payments.txt
+   (paymentID, username, classID, amount, date, status)
+
+   ratings.txt
+   (ratingID, username, instructor, classID, rating, comment, date)
+*/
 package ood.assignment;
 
 import javax.swing.*;
@@ -21,6 +37,54 @@ public class Users {
     private String role;
     private String approve = null;
     private JFrame currentFrame;
+    
+    private static final String CLASS_FILE       = "classes.txt";
+    private static final String ENROLLMENT_FILE  = "enrollment.txt";
+    private static final String PAYMENT_FILE     = "payments.txt";
+    private static final String RATING_FILE      = "ratings.txt";
+
+    private static String generateId(String prefix, String file) { //automatically generate id
+        int max = 0;
+        try {
+            File f = new File(file);
+            if (f.exists()) {
+                for (String line : Files.readAllLines(f.toPath())) {
+                    String[] parts = line.split(", ");
+                    if (parts.length > 0 && parts[0].startsWith(prefix)) {
+                        try {
+                            int num = Integer.parseInt(parts[0].substring(prefix.length()));
+                            if (num > max) max = num;
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        } catch (IOException ignored) {}
+        return String.format("%s%03d", prefix, max + 1);
+    }
+
+    private static List<String[]> readLinesAsRows(String file) { //reads each line as rows in text files
+        List<String[]> rows = new ArrayList<>();
+        try {
+            File f = new File(file);
+            if (f.exists()) {
+                for (String line : Files.readAllLines(f.toPath())) {
+                    if (!line.trim().isEmpty()) rows.add(line.split(", "));
+                }
+            }
+        } catch (IOException ignored) {}
+        return rows;
+    }
+
+    private static boolean isEnrolled(String username, String classId) { //check is user is enrolled
+        for (String[] row : readLinesAsRows(ENROLLMENT_FILE)) {
+            if (row.length >= 3 && row[0].equals(username)
+                    && row[1].equals(classId)
+                    && row[2].equalsIgnoreCase("active")) {
+                return true;
+            }
+        }
+        return false;
+    }
     
     public Users() {}
     
@@ -1407,7 +1471,7 @@ public class Users {
         signupFrame.setVisible(true);
     }
     
-    public boolean login() {
+    public boolean login() { //login functionality
         JFrame loginFrame = new JFrame("Login");
         loginFrame.setSize(400, 200);
         loginFrame.setLayout(new GridLayout(3, 2, 10, 10));
@@ -1500,14 +1564,14 @@ public class Users {
         return false;
     }
     
-    public void userMenu() {
+    public void userMenu() { //student menu
         currentFrame = new JFrame("Student Menu");
-        currentFrame.setSize(500, 400);  // Increased height to accommodate new buttons
+        currentFrame.setSize(500, 400);  
         currentFrame.setLayout(new BorderLayout());
 
         JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (" + getRole() + ")", JLabel.CENTER);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));  // Changed to 5 rows
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));  
         JButton classManagementButton = new JButton("Class Management");
         JButton paymentManagementButton = new JButton("Payment Management");
         JButton instructorRatingButton = new JButton("Instructor Ratings");
@@ -1637,8 +1701,80 @@ public class Users {
         inputPanel.add(bookButton);
         
         //Display all available classes
+        List<String[]> classes = readLinesAsRows(CLASS_FILE);
+        classBookingArea.append(String.format("-10s %-20s %-20s %-20s %-10s %-10s %-10s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Cap", "Enrolled", "Price"));
+        classBookingArea.append("------------------------------------------------------------------------------------------------------------------\n");
+        for (String[] c: classes){
+            if (c.length >= 7){
+                classBookingArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-10s %-10s%n", c[0], c[1], c[2], c[3], c[4], c[5], c[6]));
+            }
+        }
         
+        bookClassFrame.add(scroll, BorderLayout.CENTER);
+        bookClassFrame.add(inputPanel, BorderLayout.SOUTH);
         
+        bookButton.addActionListener(e -> {
+            String classId = classIdField.getText().trim();
+            if (classId.isEmpty()) {
+                JOptionPane.showMessageDialog(bookClassFrame, "Please enter a Class ID.");
+                return;
+            }
+
+            List<String[]> classesNow = readLinesAsRows(CLASS_FILE);
+            String[] target = null;
+            for (String[] c : classesNow) {
+                if (c.length >= 7 && c[0].equalsIgnoreCase(classId)) {
+                    target = c;
+                    break;
+                }
+            }
+
+            if (target == null) {
+                JOptionPane.showMessageDialog(bookClassFrame, "Class ID not found.");
+                return;
+            }
+
+            int capacity = Integer.parseInt(target[4]);
+            int enrolled = Integer.parseInt(target[5]);
+
+            if (enrolled >= capacity) {
+                JOptionPane.showMessageDialog(bookClassFrame, "Class is full.");
+                return;
+            }
+
+            if (isEnrolled(getUsername(), classId)) {
+                JOptionPane.showMessageDialog(bookClassFrame, "You are already enrolled in this class.");
+                return;
+            }
+
+            //writes into text file student has joined class
+            try (BufferedWriter w = new BufferedWriter(new FileWriter(ENROLLMENT_FILE, true))) {
+                w.write(getUsername() + ", " + classId + ", active");
+                w.newLine();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(bookClassFrame, "Error saving enrollment: " + ex.getMessage());
+                return;
+            }
+
+            // Increase Enrollment Count once student join
+            try {
+                List<String> lines = Files.readAllLines(Paths.get(CLASS_FILE));
+                for (int i = 0; i < lines.size(); i++) {
+                    String[] p = lines.get(i).split(", ");
+                    if (p.length >= 7 && p[0].equalsIgnoreCase(classId)) {
+                        p[5] = String.valueOf(Integer.parseInt(p[5]) + 1);
+                        lines.set(i, String.join(", ", p));
+                        break;
+                    }
+                }
+                Files.write(Paths.get(CLASS_FILE), lines);
+            } catch (IOException ignored) {}
+
+            JOptionPane.showMessageDialog(bookClassFrame, "Successfully booked class " + classId + "!");
+            bookClassFrame.dispose();
+        });
+        
+        bookClassFrame.setVisible(true);
     }
     
     private void viewClass(){
@@ -1650,10 +1786,32 @@ public class Users {
         classViewArea.setEditable(false);
         JScrollPane scroll = new JScrollPane(classViewArea);
         
+        //display all classes
         classViewArea.append("=== YOUR ENROLLED CLASSES ===\n");
-        classViewArea.append(String.format("%-8s %-20s %-15s %-20s %-8s%n",
-            "ClassID", "Class Name", "Instructor", "Schedule", "Status"));
-        classViewArea.append("--------------------------------------------------------------------------\n");
+        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Status"));
+        classViewArea.append("--------------------------------------------------------------------------------------------\n");
+        
+        List<String[]> enrollments = readLinesAsRows(ENROLLMENT_FILE);
+        List<String[]> classes = readLinesAsRows(CLASS_FILE);
+        boolean any = false;
+
+        for (String[] en : enrollments) {
+            if (en.length >= 3 && en[0].equals(getUsername()) && en[2].equalsIgnoreCase("active")) { //check is user is active
+                for (String[] c : classes) {
+                    if (c.length >= 7 && c[0].equals(en[1])) {
+                        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s%n",
+                                c[0], c[1], c[2], c[3], en[2]));
+                        any = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!any) classViewArea.append("You have no active enrollments.\n");
+
+        viewClassFrame.add(scroll, BorderLayout.CENTER);
+        viewClassFrame.setVisible(true);
     }
     
     private void searchClass(){
@@ -1674,6 +1832,30 @@ public class Users {
         
         searchClassFrame.add(top, BorderLayout.NORTH);
         searchClassFrame.add(scroll, BorderLayout.CENTER);
+        
+        searchButton.addActionListener(e -> { //search variable for terms
+            String term = searchField.getText().trim().toLowerCase();
+            classSearchArea.setText("");
+            classSearchArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-10s %-10s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Cap", "Enrolled", "Price"));
+            classSearchArea.append("------------------------------------------------------------------------------------------------------------------\n");
+
+            List<String[]> classes = readLinesAsRows(CLASS_FILE);
+            boolean found = false;
+            for (String[] c : classes) {
+                if (c.length >= 7) {
+                    if (term.isEmpty()
+                            || c[1].toLowerCase().contains(term)
+                            || c[2].toLowerCase().contains(term)) {
+                        classSearchArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-10s %-10s%n",
+                                c[0], c[1], c[2], c[3], c[4], c[5], c[6]));
+                        found = true;
+                    }
+                }
+            }
+            if (!found) classSearchArea.append("No matching classes found.\n");
+        });
+
+        searchClassFrame.setVisible(true);
     }
     
     private void rescheduleClass(){
@@ -1692,6 +1874,74 @@ public class Users {
         rescheduleClassFrame.add(newIdField);
         rescheduleClassFrame.add(confirm);
         rescheduleClassFrame.add(cancel);
+        
+        cancel.addActionListener(e -> rescheduleClassFrame.dispose()); //cancel button functionality
+
+        confirm.addActionListener(e -> {
+            String oldId = oldIdField.getText().trim();
+            String newId = newIdField.getText().trim();
+
+            if (oldId.isEmpty() || newId.isEmpty()) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "Please fill in both Class IDs.");
+                return;
+            }
+            if (!isEnrolled(getUsername(), oldId)) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "You are not enrolled in class " + oldId);
+                return;
+            }
+
+            String[] newClass = null;
+            for (String[] c : readLinesAsRows(CLASS_FILE)) {
+                if (c.length >= 7 && c[0].equalsIgnoreCase(newId)) { newClass = c; break; }
+            }
+            if (newClass == null) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "New Class ID not found.");
+                return;
+            }
+            if (Integer.parseInt(newClass[5]) >= Integer.parseInt(newClass[4])) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "New class is full.");
+                return;
+            }
+            if (isEnrolled(getUsername(), newId)) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "You are already enrolled in the new class.");
+                return;
+            }
+
+            try {
+                // Update enrollment file
+                List<String> lines = Files.readAllLines(Paths.get(ENROLLMENT_FILE));
+                for (int i = 0; i < lines.size(); i++) {
+                    String[] p = lines.get(i).split(", ");
+                    if (p.length >= 3 && p[0].equals(getUsername()) && p[1].equals(oldId)) {
+                        p[1] = newId;
+                        lines.set(i, String.join(", ", p));
+                        break;
+                    }
+                }
+                Files.write(Paths.get(ENROLLMENT_FILE), lines);
+
+                // Update class enrolled counts
+                List<String> classLines = Files.readAllLines(Paths.get(CLASS_FILE));
+                for (int i = 0; i < classLines.size(); i++) {
+                    String[] p = classLines.get(i).split(", ");
+                    if (p.length >= 7 && p[0].equals(oldId)) {
+                        p[5] = String.valueOf(Math.max(0, Integer.parseInt(p[5]) - 1));
+                        classLines.set(i, String.join(", ", p));
+                    } else if (p.length >= 7 && p[0].equals(newId)) {
+                        p[5] = String.valueOf(Integer.parseInt(p[5]) + 1);
+                        classLines.set(i, String.join(", ", p));
+                    }
+                }
+                Files.write(Paths.get(CLASS_FILE), classLines);
+
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "Rescheduled from " + oldId + " to " + newId + ".");
+                rescheduleClassFrame.dispose();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(rescheduleClassFrame, "Error rescheduling: " + ex.getMessage());
+            }
+        });
+
+        rescheduleClassFrame.setVisible(true);
     }
     
     private void cancelClass(){
@@ -1702,9 +1952,53 @@ public class Users {
         JTextField classIdField = new JTextField();
         JButton cancelButton = new JButton("Cancel Enrollment");
         
-        cancelClassFrame.add(new JLabel("Class ID to cancel:"));
+        cancelClassFrame.add(new JLabel("Class ID to cancel:")); //enter class id to cancel
         cancelClassFrame.add(classIdField);
 
+        cancelButton.addActionListener(e -> {
+            String classId = classIdField.getText().trim();
+            if (classId.isEmpty()) {
+                JOptionPane.showMessageDialog(cancelClassFrame, "Please enter a Class ID.");
+                return;
+            }
+            if (!isEnrolled(getUsername(), classId)) {
+                JOptionPane.showMessageDialog(cancelClassFrame, "You are not enrolled in class " + classId); //validation for if student is in the class
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(cancelClassFrame, //confirmation to cancel class
+                    "Cancel enrollment in class " + classId + "?",
+                    "Confirm", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) return;
+
+            try {
+                List<String> lines = Files.readAllLines(Paths.get(ENROLLMENT_FILE));
+                lines.removeIf(l -> {
+                    String[] p = l.split(", ");
+                    return p.length >= 3 && p[0].equals(getUsername()) && p[1].equals(classId);
+                });
+                Files.write(Paths.get(ENROLLMENT_FILE), lines);
+
+                // Decrease enrolled count
+                List<String> classLines = Files.readAllLines(Paths.get(CLASS_FILE));
+                for (int i = 0; i < classLines.size(); i++) {
+                    String[] p = classLines.get(i).split(", ");
+                    if (p.length >= 7 && p[0].equals(classId)) {
+                        p[5] = String.valueOf(Math.max(0, Integer.parseInt(p[5]) - 1));
+                        classLines.set(i, String.join(", ", p));
+                        break;
+                    }
+                }
+                Files.write(Paths.get(CLASS_FILE), classLines);
+
+                JOptionPane.showMessageDialog(cancelClassFrame, "Enrollment in " + classId + " cancelled.");
+                cancelClassFrame.dispose();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(cancelClassFrame, "Error cancelling: " + ex.getMessage());
+            }
+        });
+
+        cancelClassFrame.setVisible(true);
     }
     
     private void makePayment(){
@@ -1727,12 +2021,63 @@ public class Users {
         JTextArea info = new JTextArea();
         info.setEditable(false);
         info.append("Your active enrollments:\n");
+        for (String[] en : readLinesAsRows(ENROLLMENT_FILE)) { //get price from text file
+            if (en.length >= 3 && en[0].equals(getUsername()) && en[2].equalsIgnoreCase("active")) {
+                for (String[] c : readLinesAsRows(CLASS_FILE)) {
+                    if (c.length >= 7 && c[0].equals(en[1])) {
+                        info.append(" - " + c[0] + " (" + c[1] + ") : RM " + c[6] + "\n");
+                    }
+                }
+            }
+        }
+
+        makePaymentFrame.add(new JScrollPane(info), BorderLayout.CENTER);
+        makePaymentFrame.add(inputPanel, BorderLayout.SOUTH);
+
+        payButton.addActionListener(e -> {
+            String classId = classIdField.getText().trim();
+            String amountStr = amountField.getText().trim();
+
+            if (classId.isEmpty() || amountStr.isEmpty()) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "Please fill in both fields.");
+                return;
+            }
+            if (!isEnrolled(getUsername(), classId)) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "You are not enrolled in class " + classId);
+                return;
+            }
+            double amount;
+            try {
+                amount = Double.parseDouble(amountStr);
+                if (amount <= 0) throw new NumberFormatException();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "Invalid amount.");
+                return;
+            }
+
+            String paymentId = generateId("P", PAYMENT_FILE);
+            String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+
+            try (BufferedWriter w = new BufferedWriter(new FileWriter(PAYMENT_FILE, true))) {
+                w.write(String.format("%s, %s, %s, %.2f, %s, paid",
+                        paymentId, getUsername(), classId, amount, date));
+                w.newLine();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "Error saving payment: " + ex.getMessage());
+                return;
+            }
+
+            JOptionPane.showMessageDialog(makePaymentFrame, "Payment " + paymentId + " of RM " + String.format("%.2f", amount) + " recorded.");
+            makePaymentFrame.dispose();
+        });
+
+        makePaymentFrame.setVisible(true);
     }
     
     private void searchPayment(){
-        JFrame frame = new JFrame("Search Payment");
-        frame.setSize(600, 400);
-        frame.setLayout(new BorderLayout());
+        JFrame searchPaymentFrame = new JFrame("Search Payment");
+        searchPaymentFrame.setSize(600, 400);
+        searchPaymentFrame.setLayout(new BorderLayout());
         
         JPanel top = new JPanel();
         JTextField searchField = new JTextField(15);
@@ -1744,8 +2089,30 @@ public class Users {
         paymentSearchArea.setEditable(false);
         JScrollPane scroll = new JScrollPane(paymentSearchArea);
         
-        frame.add(top, BorderLayout.NORTH);
-        frame.add(scroll, BorderLayout.CENTER);
+        searchPaymentFrame.add(top, BorderLayout.NORTH);
+        searchPaymentFrame.add(scroll, BorderLayout.CENTER);
+        
+        searchButton.addActionListener(e -> {
+            String term = searchField.getText().trim();
+            paymentSearchArea.setText("");
+            paymentSearchArea.append(String.format("%-10s %-10s %-10s %-10s %-12s %-8s%n",
+                    "PayID", "ClassID", "Amount", "Date", "Status", "User"));
+            paymentSearchArea.append("---------------------------------------------------------------\n");
+
+            boolean found = false;
+            for (String[] p : readLinesAsRows(PAYMENT_FILE)) {
+                if (p.length >= 6 && p[1].equals(getUsername())) {
+                    if (p[0].equalsIgnoreCase(term) || p[2].equalsIgnoreCase(term)) {
+                        paymentSearchArea.append(String.format("%-10s %-10s %-10s %-10s %-12s %-8s%n",
+                                p[0], p[2], p[3], p[4], p[5], p[1]));
+                        found = true;
+                    }
+                }
+            }
+            if (!found) paymentSearchArea.append("No matching payments found.\n");
+        });
+
+        searchPaymentFrame.setVisible(true);
     }
     
     private void paymentHistory(){
@@ -1761,7 +2128,18 @@ public class Users {
         paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n", "PayID", "ClassID", "Amount", "Date", "Status"));
         paymentHistoryArea.append("-----------------------------------------------------\\n");
 
-        
+        boolean any = false;
+        for (String[] p : readLinesAsRows(PAYMENT_FILE)) {
+            if (p.length >= 6 && p[1].equals(getUsername())) {
+                paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n",
+                        p[0], p[2], p[3], p[4], p[5]));
+                any = true;
+            }
+        }
+        if (!any) paymentHistoryArea.append("You haven't made any payment yet.\n");
+
+        paymentHistoryArea.add(scrollPane, BorderLayout.CENTER);
+        paymentHistoryArea.setVisible(true);
     }
     
     private void addRating(){
@@ -1787,7 +2165,46 @@ public class Users {
         
         addRatingFrame.add(form, BorderLayout.CENTER);
         
-        
+        submit.addActionListener(e -> {
+            String classId = classIdField.getText().trim();
+            if (classId.isEmpty()) {
+                JOptionPane.showMessageDialog(addRatingFrame, "Please enter a Class ID.");
+                return;
+            }
+            if (!isEnrolled(getUsername(), classId)) {
+                JOptionPane.showMessageDialog(addRatingFrame, "You can only rate classes you are enrolled in.");
+                return;
+            }
+
+            String instructor = null;
+            for (String[] c : readLinesAsRows(CLASS_FILE)) {
+                if (c.length >= 7 && c[0].equals(classId)) { instructor = c[2]; break; }
+            }
+            if (instructor == null) {
+                JOptionPane.showMessageDialog(addRatingFrame, "Class not found.");
+                return;
+            }
+
+            int rating = (Integer) ratingCombo.getSelectedItem();
+            String comment = commentArea.getText().trim().replace(",", ";");
+            String ratingId = generateId("R", RATING_FILE);
+            String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
+
+            try (BufferedWriter w = new BufferedWriter(new FileWriter(RATING_FILE, true))) {
+                w.write(String.format("%s, %s, %s, %s, %d, %s, %s",
+                        ratingId, getUsername(), instructor, classId, rating,
+                        comment.isEmpty() ? "-" : comment, date));
+                w.newLine();
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(addRatingFrame, "Error saving rating: " + ex.getMessage());
+                return;
+            }
+
+            JOptionPane.showMessageDialog(addRatingFrame, "Rating submitted for " + instructor + " (" + rating + "/5).");
+            addRatingFrame.dispose();
+        });
+
+        addRatingFrame.setVisible(true);
     }
     
     private void viewRating(){
@@ -1801,6 +2218,19 @@ public class Users {
 
         viewRatingArea.append("=== YOUR SUBMITTED RATINGS ===\n");
         viewRatingArea.append(String.format("%-8s %-10s %-15s %-10s %-8s %-25s %-12s%n", "RateID", "ClassID", "Instructor", "Rating", "/5", "Comment", "Date"));
+        
+        boolean any = false;
+        for (String[] r : readLinesAsRows(RATING_FILE)) {
+            if (r.length >= 7 && r[1].equals(getUsername())) {
+                viewRatingArea.append(String.format("%-8s %-10s %-15s %-10s %-8s %-25s %-12s%n",
+                        r[0], r[3], r[2], r[4], "", r[5], r[6]));
+                any = true;
+            }
+        }
+        if (!any) viewRatingArea.append("You have not submitted any ratings yet.\n");
+
+        viewRatingFrame.add(scroll, BorderLayout.CENTER);
+        viewRatingFrame.setVisible(true);
     }
     
     private void leaveFeedback(String carId) {
