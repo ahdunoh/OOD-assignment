@@ -95,1285 +95,6 @@ public class Users {
         this.role = role;
     }
 
-    public class SystemAdmin extends Users {
-    public SystemAdmin(String email, String username, String password, String role) {
-        super(email, username, password, role);
-    }
-    
-    @Override
-    public void userMenu() {
-        currentFrame = new JFrame("System Admin Menu");
-        currentFrame.setSize(500, 400);
-        currentFrame.setLayout(new BorderLayout());
-        
-        JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (System Admin)", JLabel.CENTER);
-        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        
-        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
-        
-        JButton promoteButton = new JButton("Promote to Admin");
-        JButton revokeButton = new JButton("Revoke Admin Privileges");
-        JButton lockButton = new JButton("Lock User Account");
-        JButton viewEncryptedButton = new JButton("View Encrypted Data");
-        JButton deleteFeedbackButton = new JButton("Delete Any Feedback");
-        JButton logoutButton = new JButton("Logout");
-        
-        buttonPanel.add(promoteButton);
-        buttonPanel.add(revokeButton);
-        buttonPanel.add(lockButton);
-        buttonPanel.add(viewEncryptedButton);
-        buttonPanel.add(deleteFeedbackButton);
-        buttonPanel.add(logoutButton);
-        
-        currentFrame.add(welcomeLabel, BorderLayout.NORTH);
-        currentFrame.add(buttonPanel, BorderLayout.CENTER);
-        
-        promoteButton.addActionListener(e -> promoteToAdmin());
-        revokeButton.addActionListener(e -> revokeAdminPrivileges());
-        lockButton.addActionListener(e -> lockUserAccount());
-        viewEncryptedButton.addActionListener(e -> viewEncryptedData());
-        deleteFeedbackButton.addActionListener(e -> deleteAnyFeedback());
-        logoutButton.addActionListener(e -> {
-            logout();
-            currentFrame.dispose();
-        });
-        
-        currentFrame.setVisible(true);
-    }
-    
-        private void promoteToAdmin() {
-            JFrame promoteFrame = new JFrame("Promote User to Admin");
-            promoteFrame.setSize(500, 500);
-            promoteFrame.setLayout(new BorderLayout());
-
-            JTextArea userTextArea = new JTextArea();
-            userTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(userTextArea);
-
-            JPanel inputPanel = new JPanel();
-            JTextField usernameField = new JTextField(15);
-            JButton promoteButton = new JButton("Promote User");
-
-            inputPanel.add(new JLabel("Username to promote:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(promoteButton);
-
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                userTextArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
-                userTextArea.append("---------------------------------------------\n");
-
-                for (String line : userLines) {
-                    String[] credentials = line.split(", ");
-                    if (credentials.length >= 4 && !credentials[3].equalsIgnoreCase("admin")) {
-                        userTextArea.append(String.format("%-20s %-15s %-10s%n", 
-                            credentials[0], credentials[1], credentials[3]));
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(promoteFrame, "Error reading user data");
-            }
-
-            promoteFrame.add(scrollPane, BorderLayout.CENTER);
-            promoteFrame.add(inputPanel, BorderLayout.SOUTH);
-
-            promoteButton.addActionListener(e -> {
-                String username = usernameField.getText();
-                if (username.isEmpty()) {
-                    JOptionPane.showMessageDialog(promoteFrame, "Please enter a username");
-                    return;
-                }
-
-                File credentialsFile = new File("credentials.txt");
-                File tempFile = new File("temp_credentials.txt");
-
-                try {
-                    List<String> lines = Files.readAllLines(credentialsFile.toPath());
-                    boolean userFound = false;
-
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                        for (String line : lines) {
-                            String[] parts = line.split(", ");
-                            if (parts.length >= 4 && parts[1].equals(username)) {
-                                if (parts[3].equalsIgnoreCase("admin")) {
-                                    JOptionPane.showMessageDialog(promoteFrame, "User is already an admin");
-                                    return;
-                                }
-
-                                userFound = true;
-                                parts[3] = "admin";
-                                line = String.join(", ", parts);
-                            }
-                            writer.write(line);
-                            writer.newLine();
-                        }
-                    }
-
-                    if (userFound) {
-                        Files.move(tempFile.toPath(), credentialsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        JOptionPane.showMessageDialog(promoteFrame, "User promoted to admin successfully");
-                        promoteFrame.dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(promoteFrame, "User not found");
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(promoteFrame, "Error processing files: " + ex.getMessage());
-                }
-            });
-
-            promoteFrame.setVisible(true);
-        }
-
-        private void revokeAdminPrivileges() {
-            JFrame revokeFrame = new JFrame("Revoke Admin Privileges");
-            revokeFrame.setSize(600, 600);
-            revokeFrame.setLayout(new BorderLayout());
-
-            JTextArea adminTextArea = new JTextArea();
-            adminTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(adminTextArea);
-
-            JPanel inputPanel = new JPanel();
-            JTextField usernameField = new JTextField(15);
-            JComboBox<String> roleCombo = new JComboBox<>(new String[]{"staff", "salesman"});
-            JButton revokeButton = new JButton("Revoke Admin");
-
-            inputPanel.add(new JLabel("Admin username:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(new JLabel("New role:"));
-            inputPanel.add(roleCombo);
-            inputPanel.add(revokeButton);
-
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                adminTextArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
-                adminTextArea.append("---------------------------------------------\n");
-
-                for (String line : userLines) {
-                    String[] credentials = line.split(", ");
-                    if (credentials.length >= 4 && credentials[3].equalsIgnoreCase("admin")) {
-                        adminTextArea.append(String.format("%-20s %-15s %-10s%n", 
-                            credentials[0], credentials[1], credentials[3]));
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(revokeFrame, "Error reading user data");
-            }
-
-            revokeFrame.add(scrollPane, BorderLayout.CENTER);
-            revokeFrame.add(inputPanel, BorderLayout.SOUTH);
-
-            revokeButton.addActionListener(e -> {
-                String username = usernameField.getText();
-                if (username.isEmpty()) {
-                    JOptionPane.showMessageDialog(revokeFrame, "Please enter a username");
-                    return;
-                }
-
-                String newRole = (String) roleCombo.getSelectedItem();
-                File credentialsFile = new File("credentials.txt");
-                File tempFile = new File("temp_credentials.txt");
-
-                try {
-                    List<String> lines = Files.readAllLines(credentialsFile.toPath());
-                    boolean adminFound = false;
-
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                        for (String line : lines) {
-                            String[] parts = line.split(", ");
-                            if (parts.length >= 4 && parts[1].equals(username)) {
-                                if (!parts[3].equalsIgnoreCase("admin")) {
-                                    JOptionPane.showMessageDialog(revokeFrame, "User is not an admin");
-                                    return;
-                                }
-
-                                adminFound = true;
-                                parts[3] = newRole;
-                                line = String.join(", ", parts);
-                            }
-                            writer.write(line);
-                            writer.newLine();
-                        }
-                    }
-
-                    if (adminFound) {
-                        Files.move(tempFile.toPath(), credentialsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        JOptionPane.showMessageDialog(revokeFrame, "Admin privileges revoked successfully");
-                        revokeFrame.dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(revokeFrame, "Admin user not found");
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(revokeFrame, "Error processing files: " + ex.getMessage());
-                }
-            });
-
-            revokeFrame.setVisible(true);
-        }
-        
-        private void lockUserAccount() {
-            JFrame lockFrame = new JFrame("Lock User Account");
-            lockFrame.setSize(500, 400);
-            lockFrame.setLayout(new BorderLayout());
-
-            JTextArea userTextArea = new JTextArea();
-            userTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(userTextArea);
-        
-            JPanel inputPanel = new JPanel();
-            JTextField usernameField = new JTextField(15);
-            JButton lockButton = new JButton("Lock Account");
-            JButton unlockButton = new JButton("Unlock Account");
-        
-            inputPanel.add(new JLabel("Username:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(lockButton);
-            inputPanel.add(unlockButton);
-        
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                userTextArea.append(String.format("%-20s %-15s %-10s %-10s%n", "Email", "Username", "Role", "Status"));
-                userTextArea.append("-------------------------------------------------\n");
-            
-                for (String line : userLines) {
-                    String[] credentials = line.split(", ");
-                    if (credentials.length >= 4) {
-                        String status = (credentials.length > 4 && credentials[4].equals("locked")) ? "locked" : "active";
-                        userTextArea.append(String.format("%-20s %-15s %-10s %-10s%n", 
-                            credentials[0], credentials[1], credentials[3], status));
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(lockFrame, "Error reading user data");
-            }
-        
-            lockFrame.add(scrollPane, BorderLayout.CENTER);
-            lockFrame.add(inputPanel, BorderLayout.SOUTH);
-        
-            lockButton.addActionListener(e -> toggleAccountLock(usernameField.getText(), true, lockFrame));
-            unlockButton.addActionListener(e -> toggleAccountLock(usernameField.getText(), false, lockFrame));
-        
-            lockFrame.setVisible(true);
-        }
-    
-        private void toggleAccountLock(String username, boolean lock, JFrame parentFrame) {
-            if (username.isEmpty()) {
-                JOptionPane.showMessageDialog(parentFrame, "Please enter a username");
-                return;
-            }
-        
-            File credentialsFile = new File("credentials.txt");
-            File tempFile = new File("temp_credentials.txt");
-        
-            try {
-                List<String> lines = Files.readAllLines(credentialsFile.toPath());
-                boolean userFound = false;
-            
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                    for (String line : lines) {
-                        String[] parts = line.split(", ");
-                        if (parts.length >= 4 && parts[1].equals(username)) {
-                            userFound = true;
-                        
-                            if (lock) {
-                                if (parts.length > 4 && parts[4].equals("locked")) {
-                                    JOptionPane.showMessageDialog(parentFrame, "Account is already locked");
-                                    return;
-                                }
-                                line = line + ", locked";
-                            } else {
-                                if (parts.length <= 4 || !parts[4].equals("locked")) {
-                                    JOptionPane.showMessageDialog(parentFrame, "Account is not locked");
-                                    return;
-                                }
-                                line = parts[0] + ", " + parts[1] + ", " + parts[2] + ", " + parts[3];
-                                if (parts.length > 5) {
-                                    for (int i = 5; i < parts.length; i++) {
-                                        line += ", " + parts[i];
-                                    }
-                                }
-                            }
-                        }
-                        writer.write(line);
-                        writer.newLine();
-                    }
-                }
-            
-                if (userFound) {
-                    Files.move(tempFile.toPath(), credentialsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    JOptionPane.showMessageDialog(parentFrame, 
-                        lock ? "Account locked successfully" : "Account unlocked successfully");
-                    parentFrame.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(parentFrame, "User not found");
-                }
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(parentFrame, "Error processing files: " + ex.getMessage());
-            }
-        }
-    
-        private void viewEncryptedData() {
-            JFrame encryptedFrame = new JFrame("View Encrypted Data");
-            encryptedFrame.setSize(600, 500);
-            encryptedFrame.setLayout(new BorderLayout());
-        
-            JTextArea dataTextArea = new JTextArea();
-            dataTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(dataTextArea);
-        
-            JButton closeButton = new JButton("Close");
-        
-            try {
-                List<String> credentials = Files.readAllLines(Paths.get("credentials.txt"));
-                dataTextArea.append("=== Encrypted User Credentials ===\n");
-                for (String line : credentials) {
-                    dataTextArea.append(line + "\n");
-                }
-            
-                dataTextArea.append("\n=== Car Status Data ===\n");
-                List<String> carStatus = Files.readAllLines(Paths.get("carStatus.txt"));
-                for (String line : carStatus) {
-                    dataTextArea.append(line + "\n");
-                }
-            
-                dataTextArea.append("\n=== Payment Log ===\n");
-                if (Files.exists(Paths.get("paymentLog.txt"))) {
-                    List<String> paymentLog = Files.readAllLines(Paths.get("paymentLog.txt"));
-                    for (String line : paymentLog) {
-                        dataTextArea.append(line + "\n");
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(encryptedFrame, "Error reading data files: " + e.getMessage());
-            }
-        
-            encryptedFrame.add(scrollPane, BorderLayout.CENTER);
-            encryptedFrame.add(closeButton, BorderLayout.SOUTH);
-        
-            closeButton.addActionListener(e -> encryptedFrame.dispose());
-            encryptedFrame.setVisible(true);
-        }
-    
-        private void deleteAnyFeedback() {
-            JFrame feedbackFrame = new JFrame("Delete Feedback");
-            feedbackFrame.setSize(600, 500);
-            feedbackFrame.setLayout(new BorderLayout());
-        
-            JTextArea feedbackTextArea = new JTextArea();
-            feedbackTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(feedbackTextArea);
-        
-            JPanel inputPanel = new JPanel();
-            JTextField searchField = new JTextField(15);
-            JButton searchButton = new JButton("Search");
-            JButton deleteButton = new JButton("Delete Selected");
-            JButton refreshButton = new JButton("Refresh");
-        
-            inputPanel.add(new JLabel("Search feedback:"));
-            inputPanel.add(searchField);
-            inputPanel.add(searchButton);
-            inputPanel.add(deleteButton);
-            inputPanel.add(refreshButton);
-        
-            File feedbackFile = new File("feedbackLog.txt");
-            if (!feedbackFile.exists()) {
-                JOptionPane.showMessageDialog(feedbackFrame, "No feedback available to delete");
-                feedbackFrame.dispose();
-                return;
-            }
-        
-            // Display all feedback initially
-            displayAllFeedback(feedbackTextArea, feedbackFile);
-        
-            feedbackFrame.add(scrollPane, BorderLayout.CENTER);
-            feedbackFrame.add(inputPanel, BorderLayout.SOUTH);
-        
-            searchButton.addActionListener(e -> {
-                String searchTerm = searchField.getText();
-                if (searchTerm.isEmpty()) {
-                    displayAllFeedback(feedbackTextArea, feedbackFile);
-                    return;
-                }
-            
-                try {
-                    List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
-                    feedbackTextArea.setText("");
-                
-                    for (String line : feedbackLines) {
-                        if (line.toLowerCase().contains(searchTerm.toLowerCase())) {
-                            feedbackTextArea.append(line + "\n");
-                        }
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(feedbackFrame, "Error searching feedback: " + ex.getMessage());
-                }
-            });
-        
-            deleteButton.addActionListener(e -> {
-                String selectedText = feedbackTextArea.getSelectedText();
-                if (selectedText == null || selectedText.isEmpty()) {
-                    JOptionPane.showMessageDialog(feedbackFrame, "Please select feedback to delete");
-                    return;
-                }
-            
-                int confirm = JOptionPane.showConfirmDialog(feedbackFrame, 
-                    "Are you sure you want to delete the selected feedback?", 
-                    "Confirm Deletion", JOptionPane.YES_NO_OPTION);
-            
-                if (confirm == JOptionPane.YES_OPTION) {
-                    try {
-                        List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
-                        File tempFile = new File("temp_feedback.txt");
-                    
-                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                            for (String line : feedbackLines) {
-                                if (!line.equals(selectedText.trim())) {
-                                    writer.write(line);
-                                    writer.newLine();
-                                }
-                            }
-                        }
-                    
-                        Files.move(tempFile.toPath(), feedbackFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        JOptionPane.showMessageDialog(feedbackFrame, "Feedback deleted successfully");
-                        displayAllFeedback(feedbackTextArea, feedbackFile);
-                    } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(feedbackFrame, "Error deleting feedback: " + ex.getMessage());
-                    }
-                }
-            });
-        
-            refreshButton.addActionListener(e -> displayAllFeedback(feedbackTextArea, feedbackFile));
-        
-            feedbackFrame.setVisible(true);
-        }
-    
-        private void displayAllFeedback(JTextArea textArea, File feedbackFile) {
-            try {
-                List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
-                textArea.setText("");
-            
-                for (String line : feedbackLines) {
-                    textArea.append(line + "\n");
-                }
-            } catch (IOException e) {
-                textArea.setText("Error reading feedback file");
-            }
-        }
-    }
-    
-    public class ManagingStaff extends Users {
-        public ManagingStaff(String email, String username, String password, String role) {
-            super(email, username, password, role);
-        }
-
-        @Override
-        public void userMenu() {
-            currentFrame = new JFrame("Managing Staff Menu");
-            currentFrame.setSize(500, 400);
-            currentFrame.setLayout(new BorderLayout());
-            
-            JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (Managing Staff)", JLabel.CENTER);
-            welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-            
-            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
-            
-            JButton userManagementButton = new JButton("User Management");
-            JButton dataAnalysisButton = new JButton("Data Analysis");
-            JButton updateProfileButton = new JButton("Update Profile");
-            JButton logoutButton = new JButton("Logout");
-            
-            buttonPanel.add(userManagementButton);
-            buttonPanel.add(dataAnalysisButton);
-            buttonPanel.add(updateProfileButton);
-            buttonPanel.add(logoutButton);
-            
-            currentFrame.add(welcomeLabel, BorderLayout.NORTH);
-            currentFrame.add(buttonPanel, BorderLayout.CENTER);
-            
-            userManagementButton.addActionListener(e -> manageUsers());
-            dataAnalysisButton.addActionListener(e -> analyzeData());
-            updateProfileButton.addActionListener(e -> super.updateProfile());
-            logoutButton.addActionListener(e -> {
-                super.logout();
-                currentFrame.dispose();
-            });
-            
-            currentFrame.setVisible(true);
-        }
-
-        private void manageUsers() {
-            JFrame userManagementFrame = new JFrame("User Management");
-            userManagementFrame.setSize(400, 300);
-            userManagementFrame.setLayout(new BorderLayout());
-            
-            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
-            
-            JButton deleteUserButton = new JButton("Delete User");
-            JButton updateUserButton = new JButton("Update User");
-            JButton searchUserButton = new JButton("Search User");
-            JButton backButton = new JButton("Back to main menu");
-            
-            buttonPanel.add(deleteUserButton);
-            buttonPanel.add(updateUserButton);
-            buttonPanel.add(searchUserButton);
-            buttonPanel.add(backButton);
-            
-            userManagementFrame.add(buttonPanel, BorderLayout.CENTER);
-            
-            deleteUserButton.addActionListener(e -> deleteUser());
-            updateUserButton.addActionListener(e -> updateUser());
-            searchUserButton.addActionListener(e -> searchUser());
-            backButton.addActionListener(e -> userManagementFrame.dispose());
-            
-            userManagementFrame.setVisible(true);
-        }
-        
-        private void deleteUser() {
-            JFrame deleteFrame = new JFrame("Delete User");
-            deleteFrame.setSize(600, 400);
-            deleteFrame.setLayout(new BorderLayout());
-            
-            JTextArea userTextArea = new JTextArea();
-            userTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(userTextArea);
-            
-            JPanel inputPanel = new JPanel();
-            JTextField usernameField = new JTextField(15);
-            JButton deleteButton = new JButton("Delete User");
-            
-            inputPanel.add(new JLabel("Username to delete:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(deleteButton);
-            
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                userTextArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
-                userTextArea.append("---------------------------------------------\n");
-                
-                for (String line : userLines) {
-                    String[] credentials = line.split(", ");
-                    if (credentials.length >= 4 && !credentials[3].equalsIgnoreCase("staff")) {
-                        userTextArea.append(String.format("%-20s %-15s %-10s%n", 
-                            credentials[0], credentials[1], credentials[3]));
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(deleteFrame, "Error reading user data");
-            }
-            
-            deleteFrame.add(scrollPane, BorderLayout.CENTER);
-            deleteFrame.add(inputPanel, BorderLayout.SOUTH);
-            
-            deleteButton.addActionListener(e -> {
-                String usernameToDelete = usernameField.getText();
-                if (usernameToDelete.isEmpty()) {
-                    JOptionPane.showMessageDialog(deleteFrame, "Please enter a username");
-                    return;
-                }
-                
-                File fileCredentials = new File("credentials.txt");
-                try {
-                    List<String> userLines = Files.readAllLines(fileCredentials.toPath());
-                    List<String> updatedLines = new ArrayList<>();
-                    boolean userFound = false;
-                    
-                    for (String line : userLines) {
-                        String[] credentials = line.split(", ");
-                        if (credentials.length >= 4 && credentials[1].equalsIgnoreCase(usernameToDelete)) {
-                            if (credentials[3].equalsIgnoreCase("staff")) {
-                                JOptionPane.showMessageDialog(deleteFrame, "Cannot delete staff members.");
-                                return;
-                            }
-                            
-                            userFound = true;
-                            int confirm = JOptionPane.showConfirmDialog(deleteFrame, 
-                                "Are you sure you want to delete user: " + credentials[1] + " with role: " + credentials[3] + "?", 
-                                "Confirm Deletion", JOptionPane.YES_NO_OPTION);
-                            
-                            if (confirm == JOptionPane.YES_OPTION) {
-                                continue; // Skip adding this line (effectively deletes it)
-                            }
-                        }
-                        updatedLines.add(line);
-                    }
-                    
-                    if (userFound) {
-                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileCredentials))) {
-                            for (String line : updatedLines) {
-                                writer.write(line);
-                                writer.newLine();
-                            }
-                        }
-                        JOptionPane.showMessageDialog(deleteFrame, "User deleted successfully");
-                        deleteFrame.dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(deleteFrame, "User not found or user is a staff member.");
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(deleteFrame, "Error deleting user: " + ex.getMessage());
-                }
-            });
-            
-            deleteFrame.setVisible(true);
-        }
-        
-        private void updateUser() {
-            JFrame updateFrame = new JFrame("Update User");
-            updateFrame.setSize(600, 400);
-            updateFrame.setLayout(new BorderLayout());
-            
-            JTextArea userTextArea = new JTextArea();
-            userTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(userTextArea);
-            
-            JPanel inputPanel = new JPanel(new GridLayout(2, 2, 5, 5));
-            JTextField usernameField = new JTextField(15);
-            JComboBox<String> roleCombo = new JComboBox<>(new String[]{"customer", "salesman"});
-            JButton updateButton = new JButton("Update Role");
-            
-            inputPanel.add(new JLabel("Username to update:"));
-            inputPanel.add(usernameField);
-            inputPanel.add(new JLabel("New Role:"));
-            inputPanel.add(roleCombo);
-            
-            JPanel buttonPanel = new JPanel();
-            buttonPanel.add(updateButton);
-            
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                userTextArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
-                userTextArea.append("---------------------------------------------\n");
-                
-                for (String line : userLines) {
-                    String[] credentials = line.split(", ");
-                    if (credentials.length >= 4 && !credentials[3].equalsIgnoreCase("staff")) {
-                        userTextArea.append(String.format("%-20s %-15s %-10s%n", 
-                            credentials[0], credentials[1], credentials[3]));
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(updateFrame, "Error reading user data");
-            }
-            
-            updateFrame.add(scrollPane, BorderLayout.CENTER);
-            updateFrame.add(inputPanel, BorderLayout.NORTH);
-            updateFrame.add(buttonPanel, BorderLayout.SOUTH);
-            
-            updateButton.addActionListener(e -> {
-                String usernameToUpdate = usernameField.getText();
-                if (usernameToUpdate.isEmpty()) {
-                    JOptionPane.showMessageDialog(updateFrame, "Please enter a username");
-                    return;
-                }
-                
-                String newRole = (String) roleCombo.getSelectedItem();
-                File fileCredentials = new File("credentials.txt");
-                
-                try {
-                    List<String> userLines = Files.readAllLines(fileCredentials.toPath());
-                    List<String> updatedLines = new ArrayList<>();
-                    boolean userFound = false;
-                    
-                    for (String line : userLines) {
-                        String[] credentials = line.split(", ");
-                        if (credentials.length >= 4 && credentials[1].equalsIgnoreCase(usernameToUpdate)) {
-                            if (credentials[3].equalsIgnoreCase("staff")) {
-                                JOptionPane.showMessageDialog(updateFrame, "Cannot update staff members.");
-                                return;
-                            }
-                            
-                            userFound = true;
-                            credentials[3] = newRole;
-                            line = String.join(", ", credentials);
-                        }
-                        updatedLines.add(line);
-                    }
-                    
-                    if (userFound) {
-                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileCredentials))) {
-                            for (String line : updatedLines) {
-                                writer.write(line);
-                                writer.newLine();
-                            }
-                        }
-                        JOptionPane.showMessageDialog(updateFrame, "Role updated successfully");
-                        updateFrame.dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(updateFrame, "User not found or user is a staff member.");
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(updateFrame, "Error updating user: " + ex.getMessage());
-                }
-            });
-            
-            updateFrame.setVisible(true);
-        }
-        
-        private void searchUser() {
-            JFrame searchFrame = new JFrame("Search User");
-            searchFrame.setSize(500, 400);
-            searchFrame.setLayout(new BorderLayout());
-            
-            JPanel searchPanel = new JPanel();
-            JTextField searchField = new JTextField(20);
-            JButton searchButton = new JButton("Search");
-            
-            searchPanel.add(new JLabel("Search Username:"));
-            searchPanel.add(searchField);
-            searchPanel.add(searchButton);
-            
-            JTextArea resultArea = new JTextArea();
-            resultArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(resultArea);
-            
-            searchFrame.add(searchPanel, BorderLayout.NORTH);
-            searchFrame.add(scrollPane, BorderLayout.CENTER);
-            
-            searchButton.addActionListener(e -> {
-                String searchTerm = searchField.getText();
-                if (searchTerm.isEmpty()) {
-                    JOptionPane.showMessageDialog(searchFrame, "Please enter a search term");
-                    return;
-                }
-                
-                resultArea.setText("");
-                try {
-                    List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                    boolean found = false;
-                    
-                    resultArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
-                    resultArea.append("---------------------------------------------\n");
-                    
-                    for (String line : userLines) {
-                        String[] credentials = line.split(", ");
-                        if (credentials.length >= 4 && credentials[1].toLowerCase().contains(searchTerm.toLowerCase())) {
-                            resultArea.append(String.format("%-20s %-15s %-10s%n", 
-                                credentials[0], credentials[1], credentials[3]));
-                            found = true;
-                        }
-                    }
-                    
-                    if (!found) {
-                        resultArea.append("No users found matching your search.\n");
-                    }
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(searchFrame, "Error searching users: " + ex.getMessage());
-                }
-            });
-            
-            searchFrame.setVisible(true);
-        }
-
-        private void analyzeData() {
-            JFrame analysisFrame = new JFrame("Data Analysis");
-            analysisFrame.setSize(400, 300);
-            analysisFrame.setLayout(new BorderLayout());
-            
-            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
-            
-            JButton paymentAnalysisButton = new JButton("Payment Analysis");
-            JButton feedbackAnalysisButton = new JButton("Feedback Analysis");
-            JButton generateReportsButton = new JButton("Generate Reports");
-            JButton backButton = new JButton("Back to main menu");
-            
-            buttonPanel.add(paymentAnalysisButton);
-            buttonPanel.add(feedbackAnalysisButton);
-            buttonPanel.add(generateReportsButton);
-            buttonPanel.add(backButton);
-            
-            analysisFrame.add(buttonPanel, BorderLayout.CENTER);
-            
-            paymentAnalysisButton.addActionListener(e -> paymentAnalysis());
-            feedbackAnalysisButton.addActionListener(e -> feedbackAnalysis());
-            generateReportsButton.addActionListener(e -> generateReports());
-            backButton.addActionListener(e -> analysisFrame.dispose());
-            
-            analysisFrame.setVisible(true);
-        }
-
-        private void paymentAnalysis() {
-            JFrame paymentFrame = new JFrame("Payment Analysis");
-            paymentFrame.setSize(600, 400);
-            paymentFrame.setLayout(new BorderLayout());
-            
-            JTextArea paymentTextArea = new JTextArea();
-            paymentTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(paymentTextArea);
-            
-            File carStatusFile = new File("carStatus.txt");
-            File paymentLog = new File("paymentLog.txt");
-            
-            try {
-                if (!paymentLog.exists()) {
-                    paymentLog.createNewFile();
-                }
-                
-                // Write contents from carStatus.txt to paymentLog.txt
-                try (BufferedReader reader = new BufferedReader(new FileReader(carStatusFile));
-                     BufferedWriter writer = new BufferedWriter(new FileWriter(paymentLog))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        String[] carStatus = line.split(", ");
-                        if (carStatus.length >= 7 && carStatus[4].equalsIgnoreCase("paid") && carStatus[6].equalsIgnoreCase("approved")) {
-                            writer.write(String.format("%s, %s, %s", carStatus[0], carStatus[1], carStatus[5]));
-                            writer.newLine();
-                        }
-                    }
-                }
-                
-                // Read from paymentLog.txt to display
-                try (BufferedReader reader = new BufferedReader(new FileReader(paymentLog))) {
-                    String line;
-                    paymentTextArea.append(String.format("%-10s %-20s %-20s%n", "CarID", "Model", "Seller"));
-                    paymentTextArea.append("-------------------------------------------------------\n");
-                    
-                    while ((line = reader.readLine()) != null) {
-                        String[] parts = line.split(", ");
-                        if (parts.length >= 3) {
-                            // Format each line with fixed-width columns
-                            paymentTextArea.append(String.format("%-10s %-20s %-20s%n", 
-                                parts[0].trim(), parts[1].trim(), parts[2].trim()));
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(paymentFrame, "Error processing payment data: " + e.getMessage());
-            }
-            
-            paymentFrame.add(scrollPane, BorderLayout.CENTER);
-            paymentFrame.setVisible(true);
-        }
-        
-        private void feedbackAnalysis() {
-            JFrame feedbackFrame = new JFrame("Feedback Analysis");
-            feedbackFrame.setSize(600, 400);
-            feedbackFrame.setLayout(new BorderLayout());
-            
-            JTextArea feedbackTextArea = new JTextArea();
-            feedbackTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(feedbackTextArea);
-            
-            File feedbackLog = new File("feedbackLog.txt");
-            if (!feedbackLog.exists()) {
-                JOptionPane.showMessageDialog(feedbackFrame, "No feedback available");
-                feedbackFrame.dispose();
-                return;
-            }
-            
-            try (BufferedReader reader = new BufferedReader(new FileReader(feedbackLog))) {
-                String line;
-                feedbackTextArea.append("Customer Feedback:\n");
-                feedbackTextArea.append("-------------------------------------------------------\n");
-                while ((line = reader.readLine()) != null) {
-                    feedbackTextArea.append(line + "\n");
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(feedbackFrame, "Error reading feedback: " + e.getMessage());
-            }
-            
-            feedbackFrame.add(scrollPane, BorderLayout.CENTER);
-            feedbackFrame.setVisible(true);
-        }
-        
-        private void generateReports() {
-            System.out.println("DEBUG: generateReports() called");
-            JFrame reportFrame = new JFrame("Generate Reports");
-            reportFrame.setSize(500, 300);
-            reportFrame.setLayout(new BorderLayout());
-
-            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
-
-            JButton salesReportButton = new JButton("Sales Report");
-            JButton inventoryReportButton = new JButton("Inventory Report");
-            JButton userReportButton = new JButton("User Activity Report");
-            JButton feedbackReportButton = new JButton("Feedback Summary Report");
-
-            buttonPanel.add(salesReportButton);
-            buttonPanel.add(inventoryReportButton);
-            buttonPanel.add(userReportButton);
-            buttonPanel.add(feedbackReportButton);
-
-            reportFrame.add(new JLabel("Select Report Type:", JLabel.CENTER), BorderLayout.NORTH);
-            reportFrame.add(buttonPanel, BorderLayout.CENTER);
-
-            salesReportButton.addActionListener(e -> generateSalesReport());
-            inventoryReportButton.addActionListener(e -> generateInventoryReport());
-            userReportButton.addActionListener(e -> generateUserActivityReport());
-            feedbackReportButton.addActionListener(e -> generateFeedbackReport());
-
-            reportFrame.setVisible(true);
-        }
-
-        private void generateSalesReport() {
-            JFrame reportFrame = new JFrame("Sales Report");
-            reportFrame.setSize(600, 400);
-            reportFrame.setLayout(new BorderLayout());
-
-            JTextArea reportArea = new JTextArea();
-            reportArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(reportArea);
-
-            try {
-                List<String> paymentLines = Files.readAllLines(Paths.get("paymentLog.txt"));
-                List<String> carLines = Files.readAllLines(Paths.get("carStatus.txt"));
-
-                reportArea.append("=== SALES REPORT ===\n");
-                reportArea.append(String.format("%-10s %-15s %-15s %-10s %-10s%n", 
-                    "CarID", "Model", "Seller", "Price", "Status"));
-                reportArea.append("------------------------------------------------------------\n");
-
-                double totalRevenue = 0;
-                int totalSales = 0;
-
-                for (String paymentLine : paymentLines) {
-                    String[] paymentData = paymentLine.split(", ");
-                    if (paymentData.length >= 3) {
-                        String carId = paymentData[0];
-                        String model = paymentData[1];
-                        String seller = paymentData[2];
-
-                        // Find the car details to get price
-                        for (String carLine : carLines) {
-                            String[] carData = carLine.split(", ");
-                            if (carData.length >= 7 && carData[0].equals(carId)) {
-                                String price = carData[3];
-                                String status = carData[4];
-
-                                reportArea.append(String.format("%-10s %-15s %-15s %-10s %-10s%n", 
-                                    carId, model, seller, price, status));
-
-                                try {
-                                    totalRevenue += Double.parseDouble(price);
-                                    totalSales++;
-                                } catch (NumberFormatException e) {
-                                    // Skip if price is not a valid number
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                reportArea.append("\n=== SUMMARY ===\n");
-                reportArea.append(String.format("Total Sales: %d%n", totalSales));
-                reportArea.append(String.format("Total Revenue: RM%.2f%n", totalRevenue));
-
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(reportFrame, "Error generating sales report: " + e.getMessage());
-            }
-
-            JButton saveButton = new JButton("Save Report");
-            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "sales_report.txt"));
-
-            reportFrame.add(scrollPane, BorderLayout.CENTER);
-            reportFrame.add(saveButton, BorderLayout.SOUTH);
-            reportFrame.setVisible(true);
-        }
-
-        private void generateInventoryReport() {
-            JFrame reportFrame = new JFrame("Inventory Report");
-            reportFrame.setSize(600, 400);
-            reportFrame.setLayout(new BorderLayout());
-
-            JTextArea reportArea = new JTextArea();
-            reportArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(reportArea);
-
-            try {
-                List<String> carLines = Files.readAllLines(Paths.get("carStatus.txt"));
-
-                reportArea.append("=== INVENTORY REPORT ===\n");
-                reportArea.append(String.format("%-10s %-15s %-10s %-10s %-15s %-15s%n", 
-                    "CarID", "Model", "Year", "Price", "Status", "Approval"));
-                reportArea.append("--------------------------------------------------------------------\n");
-
-                int availableCount = 0;
-                int bookedCount = 0;
-                int paidCount = 0;
-                int totalCars = 0;
-
-                for (String carLine : carLines) {
-                    String[] carData = carLine.split(", ");
-                    if (carData.length >= 7) {
-                        reportArea.append(String.format("%-10s %-15s %-10s %-10s %-15s %-15s%n", 
-                            carData[0], carData[1], carData[2], carData[3], carData[4], carData[6]));
-
-                        totalCars++;
-                        switch (carData[4].toLowerCase()) {
-                            case "available":
-                                availableCount++;
-                                break;
-                            case "booked":
-                                bookedCount++;
-                                break;
-                            case "paid":
-                                paidCount++;
-                                break;
-                        }
-                    }
-                }
-
-                reportArea.append("\n=== SUMMARY ===\n");
-                reportArea.append(String.format("Total Cars: %d%n", totalCars));
-                reportArea.append(String.format("Available: %d%n", availableCount));
-                reportArea.append(String.format("Booked: %d%n", bookedCount));
-                reportArea.append(String.format("Paid: %d%n", paidCount));
-
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(reportFrame, "Error generating inventory report: " + e.getMessage());
-            }
-
-            JButton saveButton = new JButton("Save Report");
-            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "inventory_report.txt"));
-
-            reportFrame.add(scrollPane, BorderLayout.CENTER);
-            reportFrame.add(saveButton, BorderLayout.SOUTH);
-            reportFrame.setVisible(true);
-        }
-
-        private void generateUserActivityReport() {
-            JFrame reportFrame = new JFrame("User Activity Report");
-            reportFrame.setSize(600, 400);
-            reportFrame.setLayout(new BorderLayout());
-
-            JTextArea reportArea = new JTextArea();
-            reportArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(reportArea);
-
-            try {
-                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
-                List<String> ownershipLines = Files.exists(Paths.get("ownership.txt")) ? 
-                    Files.readAllLines(Paths.get("ownership.txt")) : new ArrayList<>();
-
-                reportArea.append("=== USER ACTIVITY REPORT ===\n");
-                reportArea.append(String.format("%-15s %-15s %-10s %-15s %-10s%n", 
-                    "Username", "Email", "Role", "Cars Owned", "Status"));
-                reportArea.append("------------------------------------------------------------\n");
-
-                int totalUsers = 0;
-                int activeUsers = 0;
-                int lockedUsers = 0;
-
-                for (String userLine : userLines) {
-                    String[] userData = userLine.split(", ");
-                    if (userData.length >= 4) {
-                        String username = userData[1];
-                        String role = userData[3];
-                        String status = (userData.length > 4 && userData[4].equals("locked")) ? "Locked" : "Active";
-
-                        // Count cars owned by this user
-                        int carsOwned = 0;
-                        for (String ownershipLine : ownershipLines) {
-                            String[] ownershipData = ownershipLine.split(", ");
-                            if (ownershipData.length >= 2 && ownershipData[0].equals(username)) {
-                                carsOwned++;
-                            }
-                        }
-
-                        reportArea.append(String.format("%-15s %-15s %-10s %-15d %-10s%n", 
-                            username, userData[0], role, carsOwned, status));
-
-                        totalUsers++;
-                        if (status.equals("Active")) {
-                            activeUsers++;
-                        } else {
-                            lockedUsers++;
-                        }
-                    }
-                }
-
-                reportArea.append("\n=== SUMMARY ===\n");
-                reportArea.append(String.format("Total Users: %d%n", totalUsers));
-                reportArea.append(String.format("Active Users: %d%n", activeUsers));
-                reportArea.append(String.format("Locked Users: %d%n", lockedUsers));
-
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(reportFrame, "Error generating user activity report: " + e.getMessage());
-            }
-
-            JButton saveButton = new JButton("Save Report");
-            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "user_activity_report.txt"));
-
-            reportFrame.add(scrollPane, BorderLayout.CENTER);
-            reportFrame.add(saveButton, BorderLayout.SOUTH);
-            reportFrame.setVisible(true);
-        }
-
-        private void generateFeedbackReport() {
-            JFrame reportFrame = new JFrame("Feedback Summary Report");
-            reportFrame.setSize(600, 400);
-            reportFrame.setLayout(new BorderLayout());
-
-            JTextArea reportArea = new JTextArea();
-            reportArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(reportArea);
-
-            File feedbackFile = new File("feedbackLog.txt");
-            if (!feedbackFile.exists()) {
-                JOptionPane.showMessageDialog(reportFrame, "No feedback available to generate report");
-                reportFrame.dispose();
-                return;
-            }
-
-            try {
-                List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
-
-                reportArea.append("=== FEEDBACK SUMMARY REPORT ===\n");
-                reportArea.append(String.format("%-10s %-15s %-20s %-30s%n", 
-                    "CarID", "Username", "Feedback Excerpt", "Date"));
-                reportArea.append("--------------------------------------------------------------------\n");
-
-                int totalFeedback = 0;
-
-                for (String line : feedbackLines) {
-                    // Assuming format: "CarID: Username - Feedback text - Date"
-                    String[] parts = line.split(" - ");
-                    if (parts.length >= 3) {
-                        String carUserPart = parts[0];
-                        String feedbackText = parts[1];
-                        String date = parts[2];
-
-                        String[] carUser = carUserPart.split(": ");
-                        String carId = carUser.length > 0 ? carUser[0] : "N/A";
-                        String username = carUser.length > 1 ? carUser[1] : "N/A";
-
-                        // Shorten feedback text for display
-                        String excerpt = feedbackText.length() > 25 ? 
-                            feedbackText.substring(0, 25) + "..." : feedbackText;
-
-                        reportArea.append(String.format("%-10s %-15s %-20s %-30s%n", 
-                            carId, username, excerpt, date));
-
-                        totalFeedback++;
-                    }
-                }
-
-                reportArea.append("\n=== SUMMARY ===\n");
-                reportArea.append(String.format("Total Feedback Entries: %d%n", totalFeedback));
-
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(reportFrame, "Error generating feedback report: " + e.getMessage());
-            }
-
-            JButton saveButton = new JButton("Save Report");
-            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "feedback_report.txt"));
-
-            reportFrame.add(scrollPane, BorderLayout.CENTER);
-            reportFrame.add(saveButton, BorderLayout.SOUTH);
-            reportFrame.setVisible(true);
-        }
-
-        private void saveReportToFile(String reportContent, String fileName) {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(new File(fileName));
-            int userSelection = fileChooser.showSaveDialog(null);
-
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
-                File fileToSave = fileChooser.getSelectedFile();
-                try {
-                    Files.write(fileToSave.toPath(), reportContent.getBytes());
-                    JOptionPane.showMessageDialog(null, "Report saved successfully to: " + fileToSave.getAbsolutePath());
-                } catch (IOException e) {
-                    JOptionPane.showMessageDialog(null, "Error saving report: " + e.getMessage());
-                }
-            }
-        }
-    }
-    
-    public class Salesman extends Users {
-        public Salesman(String email, String username, String password, String role) {
-            super(email, username, password, role);
-        }
-
-        @Override
-        public void userMenu() {
-            // Set the current user in CarSystem before showing the menu
-
-            currentFrame = new JFrame("Salesman Menu");
-            currentFrame.setSize(500, 400);
-            currentFrame.setLayout(new BorderLayout());
-
-            JLabel welcomeLabel = new JLabel("Welcome " + getUsername() + " (Salesman)", JLabel.CENTER);
-            welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-
-            JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 10, 10));
-
-            JButton viewSalesButton = new JButton("View Sales Records");
-            JButton updateProfileButton = new JButton("Update Profile");
-            JButton logoutButton = new JButton("Logout");
-
-            buttonPanel.add(viewSalesButton);
-            buttonPanel.add(updateProfileButton);
-            buttonPanel.add(logoutButton);
-
-            currentFrame.add(welcomeLabel, BorderLayout.NORTH);
-            currentFrame.add(buttonPanel, BorderLayout.CENTER);
-
-            viewSalesButton.addActionListener(e -> paymentAnalysis());
-            updateProfileButton.addActionListener(e -> super.updateProfile());
-            logoutButton.addActionListener(e -> {
-                super.logout();
-                currentFrame.dispose();
-            });
-
-            currentFrame.setVisible(true);
-        }
-
-        private void paymentAnalysis() {
-            JFrame paymentFrame = new JFrame("Payment Analysis");
-            paymentFrame.setSize(600, 400);
-            paymentFrame.setLayout(new BorderLayout());
-            
-            JTextArea paymentTextArea = new JTextArea();
-            paymentTextArea.setEditable(false);
-            JScrollPane scrollPane = new JScrollPane(paymentTextArea);
-            
-            File carStatusFile = new File("carStatus.txt");
-            File paymentLog = new File("paymentLog.txt");
-            
-            try {
-                if (!paymentLog.exists()) {
-                    paymentLog.createNewFile();
-                }
-                
-                // Write contents from carStatus.txt to paymentLog.txt
-                try (BufferedReader reader = new BufferedReader(new FileReader(carStatusFile));
-                     BufferedWriter writer = new BufferedWriter(new FileWriter(paymentLog))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        String[] carStatus = line.split(", ");
-                        if (carStatus.length >= 7 && carStatus[4].equalsIgnoreCase("paid") && carStatus[6].equalsIgnoreCase("approved")) {
-                            writer.write(String.format("%s, %s, %s", carStatus[0], carStatus[1], carStatus[5]));
-                            writer.newLine();
-                        }
-                    }
-                }
-                
-                // Read from paymentLog.txt to display
-                try (BufferedReader reader = new BufferedReader(new FileReader(paymentLog))) {
-                    String line;
-                    paymentTextArea.append(String.format("%-10s %-20s %-20s%n", "CarID", "Model", "Seller"));
-                    paymentTextArea.append("-------------------------------------------------------\n");
-                    
-                    while ((line = reader.readLine()) != null) {
-                        String[] parts = line.split(", ");
-                        if (parts.length >= 3) {
-                            // Format each line with fixed-width columns
-                            paymentTextArea.append(String.format("%-10s %-20s %-20s%n", 
-                                parts[0].trim(), parts[1].trim(), parts[2].trim()));
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(paymentFrame, "Error processing payment data: " + e.getMessage());
-            }
-            
-            paymentFrame.add(scrollPane, BorderLayout.CENTER);
-            paymentFrame.setVisible(true);
-        }
-    }
-
     public String getUsername() {
         return username;
     }
@@ -1457,8 +178,10 @@ public class Users {
                     scanner.close();
                 }
 
-                FileWriter fileWriter = new FileWriter(credentialsFile, true);
-                fileWriter.close();
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(credentialsFile, true))) {
+                    writer.write(email + ", " + username + ", " + password + ", " + role);
+                    writer.newLine();
+                }
                 JOptionPane.showMessageDialog(signupFrame, "Account created successfully!");
                 signupFrame.dispose();
                 login();
@@ -1537,20 +260,8 @@ public class Users {
                 if (loginSuccess) {
                     JOptionPane.showMessageDialog(loginFrame, "Login successful. Welcome!");
                     loginFrame.dispose();
-                    if (credentials[3].equalsIgnoreCase("staff")) {
-                        ManagingStaff staff = new ManagingStaff(credentials[0], credentials[1], credentials[2], credentials[3]);
-                        staff.userMenu();
-                    } else if (credentials[3].equalsIgnoreCase("customer")) {
-                        Users user = new Users(credentials[0], credentials[1], credentials[2], credentials[3]);
-                        user.userMenu();
-                    } else if (credentials[3].equalsIgnoreCase("salesman")) {
-                        Salesman salesman = new Salesman(credentials[0], credentials[1], credentials[2], credentials[3]);
-                        salesman.userMenu();
-                    }
-                    else if (credentials[3].equalsIgnoreCase("admin")) {
-                        SystemAdmin admin = new SystemAdmin(credentials[0], credentials[1], credentials[2], credentials[3]);
-                        admin.userMenu();
-                    }
+                    Users user = new Users(credentials[0], credentials[1], credentials[2], credentials[3]);
+                    user.userMenu();
                 } else {
                     JOptionPane.showMessageDialog(loginFrame, "Invalid username and/or password.");
                 }
@@ -2233,40 +944,6 @@ public class Users {
         viewRatingFrame.setVisible(true);
     }
     
-    private void leaveFeedback(String carId) {
-        JFrame feedbackFrame = new JFrame("Leave Feedback for Car " + carId);
-        feedbackFrame.setSize(400, 300);
-        feedbackFrame.setLayout(new BorderLayout());
-        
-        JTextArea feedbackArea = new JTextArea(10, 30);
-        JScrollPane scrollPane = new JScrollPane(feedbackArea);
-        JButton submitButton = new JButton("Submit Feedback");
-        
-        feedbackFrame.add(new JLabel("Please leave your feedback for car " + carId + ":"), BorderLayout.NORTH);
-        feedbackFrame.add(scrollPane, BorderLayout.CENTER);
-        feedbackFrame.add(submitButton, BorderLayout.SOUTH);
-        
-        submitButton.addActionListener(e -> {
-            String review = feedbackArea.getText();
-            if (review.isEmpty()) {
-                JOptionPane.showMessageDialog(feedbackFrame, "Please enter some feedback");
-                return;
-            }
-            
-            File feedbackLog = new File("feedbackLog.txt");
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(feedbackLog, true))) {
-                writer.write(carId + ": " + getUsername() + " - " + review);
-                writer.newLine();
-                JOptionPane.showMessageDialog(feedbackFrame, "Thank you for your feedback!");
-                feedbackFrame.dispose();
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(feedbackFrame, "Error saving feedback: " + ex.getMessage());
-            }
-        });
-        
-        feedbackFrame.setVisible(true);
-    }
-    
     public void logout() {
         int choice = JOptionPane.showConfirmDialog(null, 
             "Would you like to logout " + getUsername() + "?", 
@@ -2424,44 +1101,709 @@ public class Users {
 
         return updatedLine[0];
     }
+}
 
-    private void viewFeedbackHistory() {
-        JFrame feedbackFrame = new JFrame("Your Feedback History");
-        feedbackFrame.setSize(600, 400);
-        feedbackFrame.setLayout(new BorderLayout());
+/*private void lockUserAccount() {
+            JFrame lockFrame = new JFrame("Lock User Account");
+            lockFrame.setSize(500, 400);
+            lockFrame.setLayout(new BorderLayout());
 
-        JTextArea feedbackTextArea = new JTextArea();
-        feedbackTextArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(feedbackTextArea);
-
-        File feedbackFile = new File("feedbackLog.txt");
-        if (!feedbackFile.exists()) {
-            JOptionPane.showMessageDialog(feedbackFrame, "You haven't submitted any feedback yet");
-            feedbackFrame.dispose();
-            return;
-        }
-
-        try {
-            List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
-            feedbackTextArea.append("=== YOUR FEEDBACK HISTORY ===\n");
-            feedbackTextArea.append("------------------------------------------------\n");
-
-            for (String line : feedbackLines) {
-                if (line.contains(getUsername())) {
-                    // Extract the relevant parts of the feedback
-                    String[] parts = line.split(" - ");
-                    if (parts.length >= 2) {
-                        String carInfo = parts[0];
-                        String feedback = parts[1];
-                        feedbackTextArea.append(carInfo + "\n" + feedback + "\n\n");
+            JTextArea userTextArea = new JTextArea();
+            userTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(userTextArea);
+        
+            JPanel inputPanel = new JPanel();
+            JTextField usernameField = new JTextField(15);
+            JButton lockButton = new JButton("Lock Account");
+            JButton unlockButton = new JButton("Unlock Account");
+        
+            inputPanel.add(new JLabel("Username:"));
+            inputPanel.add(usernameField);
+            inputPanel.add(lockButton);
+            inputPanel.add(unlockButton);
+        
+            try {
+                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
+                userTextArea.append(String.format("%-20s %-15s %-10s %-10s%n", "Email", "Username", "Role", "Status"));
+                userTextArea.append("-------------------------------------------------\n");
+            
+                for (String line : userLines) {
+                    String[] credentials = line.split(", ");
+                    if (credentials.length >= 4) {
+                        String status = (credentials.length > 4 && credentials[4].equals("locked")) ? "locked" : "active";
+                        userTextArea.append(String.format("%-20s %-15s %-10s %-10s%n", 
+                            credentials[0], credentials[1], credentials[3], status));
                     }
                 }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(lockFrame, "Error reading user data");
             }
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(feedbackFrame, "Error reading feedback: " + e.getMessage());
+        
+            lockFrame.add(scrollPane, BorderLayout.CENTER);
+            lockFrame.add(inputPanel, BorderLayout.SOUTH);
+        
+            lockButton.addActionListener(e -> toggleAccountLock(usernameField.getText(), true, lockFrame));
+            unlockButton.addActionListener(e -> toggleAccountLock(usernameField.getText(), false, lockFrame));
+        
+            lockFrame.setVisible(true);
+        }*/
+    
+        /*private void toggleAccountLock(String username, boolean lock, JFrame parentFrame) {
+            if (username.isEmpty()) {
+                JOptionPane.showMessageDialog(parentFrame, "Please enter a username");
+                return;
+            }
+        
+            File credentialsFile = new File("credentials.txt");
+            File tempFile = new File("temp_credentials.txt");
+        
+            try {
+                List<String> lines = Files.readAllLines(credentialsFile.toPath());
+                boolean userFound = false;
+            
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+                    for (String line : lines) {
+                        String[] parts = line.split(", ");
+                        if (parts.length >= 4 && parts[1].equals(username)) {
+                            userFound = true;
+                        
+                            if (lock) {
+                                if (parts.length > 4 && parts[4].equals("locked")) {
+                                    JOptionPane.showMessageDialog(parentFrame, "Account is already locked");
+                                    return;
+                                }
+                                line = line + ", locked";
+                            } else {
+                                if (parts.length <= 4 || !parts[4].equals("locked")) {
+                                    JOptionPane.showMessageDialog(parentFrame, "Account is not locked");
+                                    return;
+                                }
+                                line = parts[0] + ", " + parts[1] + ", " + parts[2] + ", " + parts[3];
+                                if (parts.length > 5) {
+                                    for (int i = 5; i < parts.length; i++) {
+                                        line += ", " + parts[i];
+                                    }
+                                }
+                            }
+                        }
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                }
+            
+                if (userFound) {
+                    Files.move(tempFile.toPath(), credentialsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    JOptionPane.showMessageDialog(parentFrame, 
+                        lock ? "Account locked successfully" : "Account unlocked successfully");
+                    parentFrame.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(parentFrame, "User not found");
+                }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(parentFrame, "Error processing files: " + ex.getMessage());
+            }
+        }*/
+    
+        /*private void viewEncryptedData() {
+            JFrame encryptedFrame = new JFrame("View Encrypted Data");
+            encryptedFrame.setSize(600, 500);
+            encryptedFrame.setLayout(new BorderLayout());
+        
+            JTextArea dataTextArea = new JTextArea();
+            dataTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(dataTextArea);
+        
+            JButton closeButton = new JButton("Close");
+        
+            try {
+                List<String> credentials = Files.readAllLines(Paths.get("credentials.txt"));
+                dataTextArea.append("=== Encrypted User Credentials ===\n");
+                for (String line : credentials) {
+                    dataTextArea.append(line + "\n");
+                }
+            
+                dataTextArea.append("\n=== Car Status Data ===\n");
+                List<String> carStatus = Files.readAllLines(Paths.get("carStatus.txt"));
+                for (String line : carStatus) {
+                    dataTextArea.append(line + "\n");
+                }
+            
+                dataTextArea.append("\n=== Payment Log ===\n");
+                if (Files.exists(Paths.get("paymentLog.txt"))) {
+                    List<String> paymentLog = Files.readAllLines(Paths.get("paymentLog.txt"));
+                    for (String line : paymentLog) {
+                        dataTextArea.append(line + "\n");
+                    }
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(encryptedFrame, "Error reading data files: " + e.getMessage());
+            }
+        
+            encryptedFrame.add(scrollPane, BorderLayout.CENTER);
+            encryptedFrame.add(closeButton, BorderLayout.SOUTH);
+        
+            closeButton.addActionListener(e -> encryptedFrame.dispose());
+            encryptedFrame.setVisible(true);
+        }*/
+        
+        /*private void updateUser() {
+            JFrame updateFrame = new JFrame("Update User");
+            updateFrame.setSize(600, 400);
+            updateFrame.setLayout(new BorderLayout());
+            
+            JTextArea userTextArea = new JTextArea();
+            userTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(userTextArea);
+            
+            JPanel inputPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+            JTextField usernameField = new JTextField(15);
+            JComboBox<String> roleCombo = new JComboBox<>(new String[]{"customer", "salesman"});
+            JButton updateButton = new JButton("Update Role");
+            
+            inputPanel.add(new JLabel("Username to update:"));
+            inputPanel.add(usernameField);
+            inputPanel.add(new JLabel("New Role:"));
+            inputPanel.add(roleCombo);
+            
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.add(updateButton);
+            
+            try {
+                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
+                userTextArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
+                userTextArea.append("---------------------------------------------\n");
+                
+                for (String line : userLines) {
+                    String[] credentials = line.split(", ");
+                    if (credentials.length >= 4 && !credentials[3].equalsIgnoreCase("staff")) {
+                        userTextArea.append(String.format("%-20s %-15s %-10s%n", 
+                            credentials[0], credentials[1], credentials[3]));
+                    }
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(updateFrame, "Error reading user data");
+            }
+            
+            updateFrame.add(scrollPane, BorderLayout.CENTER);
+            updateFrame.add(inputPanel, BorderLayout.NORTH);
+            updateFrame.add(buttonPanel, BorderLayout.SOUTH);
+            
+            updateButton.addActionListener(e -> {
+                String usernameToUpdate = usernameField.getText();
+                if (usernameToUpdate.isEmpty()) {
+                    JOptionPane.showMessageDialog(updateFrame, "Please enter a username");
+                    return;
+                }
+                
+                String newRole = (String) roleCombo.getSelectedItem();
+                File fileCredentials = new File("credentials.txt");
+                
+                try {
+                    List<String> userLines = Files.readAllLines(fileCredentials.toPath());
+                    List<String> updatedLines = new ArrayList<>();
+                    boolean userFound = false;
+                    
+                    for (String line : userLines) {
+                        String[] credentials = line.split(", ");
+                        if (credentials.length >= 4 && credentials[1].equalsIgnoreCase(usernameToUpdate)) {
+                            if (credentials[3].equalsIgnoreCase("staff")) {
+                                JOptionPane.showMessageDialog(updateFrame, "Cannot update staff members.");
+                                return;
+                            }
+                            
+                            userFound = true;
+                            credentials[3] = newRole;
+                            line = String.join(", ", credentials);
+                        }
+                        updatedLines.add(line);
+                    }
+                    
+                    if (userFound) {
+                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileCredentials))) {
+                            for (String line : updatedLines) {
+                                writer.write(line);
+                                writer.newLine();
+                            }
+                        }
+                        JOptionPane.showMessageDialog(updateFrame, "Role updated successfully");
+                        updateFrame.dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(updateFrame, "User not found or user is a staff member.");
+                    }
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(updateFrame, "Error updating user: " + ex.getMessage());
+                }
+            });
+            
+            updateFrame.setVisible(true);
+        }*/
+        
+        /*private void searchUser() {
+            JFrame searchFrame = new JFrame("Search User");
+            searchFrame.setSize(500, 400);
+            searchFrame.setLayout(new BorderLayout());
+            
+            JPanel searchPanel = new JPanel();
+            JTextField searchField = new JTextField(20);
+            JButton searchButton = new JButton("Search");
+            
+            searchPanel.add(new JLabel("Search Username:"));
+            searchPanel.add(searchField);
+            searchPanel.add(searchButton);
+            
+            JTextArea resultArea = new JTextArea();
+            resultArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(resultArea);
+            
+            searchFrame.add(searchPanel, BorderLayout.NORTH);
+            searchFrame.add(scrollPane, BorderLayout.CENTER);
+            
+            searchButton.addActionListener(e -> {
+                String searchTerm = searchField.getText();
+                if (searchTerm.isEmpty()) {
+                    JOptionPane.showMessageDialog(searchFrame, "Please enter a search term");
+                    return;
+                }
+                
+                resultArea.setText("");
+                try {
+                    List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
+                    boolean found = false;
+                    
+                    resultArea.append(String.format("%-20s %-15s %-10s%n", "Email", "Username", "Role"));
+                    resultArea.append("---------------------------------------------\n");
+                    
+                    for (String line : userLines) {
+                        String[] credentials = line.split(", ");
+                        if (credentials.length >= 4 && credentials[1].toLowerCase().contains(searchTerm.toLowerCase())) {
+                            resultArea.append(String.format("%-20s %-15s %-10s%n", 
+                                credentials[0], credentials[1], credentials[3]));
+                            found = true;
+                        }
+                    }
+                    
+                    if (!found) {
+                        resultArea.append("No users found matching your search.\n");
+                    }
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(searchFrame, "Error searching users: " + ex.getMessage());
+                }
+            });
+            
+            searchFrame.setVisible(true);
+        }*/
+
+        /*private void analyzeData() {
+            JFrame analysisFrame = new JFrame("Data Analysis");
+            analysisFrame.setSize(400, 300);
+            analysisFrame.setLayout(new BorderLayout());
+            
+            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
+            
+            JButton paymentAnalysisButton = new JButton("Payment Analysis");
+            JButton feedbackAnalysisButton = new JButton("Feedback Analysis");
+            JButton generateReportsButton = new JButton("Generate Reports");
+            JButton backButton = new JButton("Back to main menu");
+            
+            buttonPanel.add(paymentAnalysisButton);
+            buttonPanel.add(feedbackAnalysisButton);
+            buttonPanel.add(generateReportsButton);
+            buttonPanel.add(backButton);
+            
+            analysisFrame.add(buttonPanel, BorderLayout.CENTER);
+            
+            paymentAnalysisButton.addActionListener(e -> paymentAnalysis());
+            feedbackAnalysisButton.addActionListener(e -> feedbackAnalysis());
+            generateReportsButton.addActionListener(e -> generateReports());
+            backButton.addActionListener(e -> analysisFrame.dispose());
+            
+            analysisFrame.setVisible(true);
         }
 
-        feedbackFrame.add(scrollPane, BorderLayout.CENTER);
-        feedbackFrame.setVisible(true);
-    }
-}
+        private void paymentAnalysis() {
+            JFrame paymentFrame = new JFrame("Payment Analysis");
+            paymentFrame.setSize(600, 400);
+            paymentFrame.setLayout(new BorderLayout());
+            
+            JTextArea paymentTextArea = new JTextArea();
+            paymentTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(paymentTextArea);
+            
+            File carStatusFile = new File("carStatus.txt");
+            File paymentLog = new File("paymentLog.txt");
+            
+            try {
+                if (!paymentLog.exists()) {
+                    paymentLog.createNewFile();
+                }
+                
+                // Write contents from carStatus.txt to paymentLog.txt
+                try (BufferedReader reader = new BufferedReader(new FileReader(carStatusFile));
+                     BufferedWriter writer = new BufferedWriter(new FileWriter(paymentLog))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String[] carStatus = line.split(", ");
+                        if (carStatus.length >= 7 && carStatus[4].equalsIgnoreCase("paid") && carStatus[6].equalsIgnoreCase("approved")) {
+                            writer.write(String.format("%s, %s, %s", carStatus[0], carStatus[1], carStatus[5]));
+                            writer.newLine();
+                        }
+                    }
+                }
+                
+                // Read from paymentLog.txt to display
+                try (BufferedReader reader = new BufferedReader(new FileReader(paymentLog))) {
+                    String line;
+                    paymentTextArea.append(String.format("%-10s %-20s %-20s%n", "CarID", "Model", "Seller"));
+                    paymentTextArea.append("-------------------------------------------------------\n");
+                    
+                    while ((line = reader.readLine()) != null) {
+                        String[] parts = line.split(", ");
+                        if (parts.length >= 3) {
+                            // Format each line with fixed-width columns
+                            paymentTextArea.append(String.format("%-10s %-20s %-20s%n", 
+                                parts[0].trim(), parts[1].trim(), parts[2].trim()));
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(paymentFrame, "Error processing payment data: " + e.getMessage());
+            }
+            
+            paymentFrame.add(scrollPane, BorderLayout.CENTER);
+            paymentFrame.setVisible(true);
+        }
+        
+        private void feedbackAnalysis() {
+            JFrame feedbackFrame = new JFrame("Feedback Analysis");
+            feedbackFrame.setSize(600, 400);
+            feedbackFrame.setLayout(new BorderLayout());
+            
+            JTextArea feedbackTextArea = new JTextArea();
+            feedbackTextArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(feedbackTextArea);
+            
+            File feedbackLog = new File("feedbackLog.txt");
+            if (!feedbackLog.exists()) {
+                JOptionPane.showMessageDialog(feedbackFrame, "No feedback available");
+                feedbackFrame.dispose();
+                return;
+            }
+            
+            try (BufferedReader reader = new BufferedReader(new FileReader(feedbackLog))) {
+                String line;
+                feedbackTextArea.append("Customer Feedback:\n");
+                feedbackTextArea.append("-------------------------------------------------------\n");
+                while ((line = reader.readLine()) != null) {
+                    feedbackTextArea.append(line + "\n");
+                }
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(feedbackFrame, "Error reading feedback: " + e.getMessage());
+            }
+            
+            feedbackFrame.add(scrollPane, BorderLayout.CENTER);
+            feedbackFrame.setVisible(true);
+        }
+        
+        private void generateReports() {
+            System.out.println("DEBUG: generateReports() called");
+            JFrame reportFrame = new JFrame("Generate Reports");
+            reportFrame.setSize(500, 300);
+            reportFrame.setLayout(new BorderLayout());
+
+            JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 10, 10));
+
+            JButton salesReportButton = new JButton("Sales Report");
+            JButton inventoryReportButton = new JButton("Inventory Report");
+            JButton userReportButton = new JButton("User Activity Report");
+            JButton feedbackReportButton = new JButton("Feedback Summary Report");
+
+            buttonPanel.add(salesReportButton);
+            buttonPanel.add(inventoryReportButton);
+            buttonPanel.add(userReportButton);
+            buttonPanel.add(feedbackReportButton);
+
+            reportFrame.add(new JLabel("Select Report Type:", JLabel.CENTER), BorderLayout.NORTH);
+            reportFrame.add(buttonPanel, BorderLayout.CENTER);
+
+            salesReportButton.addActionListener(e -> generateSalesReport());
+            inventoryReportButton.addActionListener(e -> generateInventoryReport());
+            userReportButton.addActionListener(e -> generateUserActivityReport());
+            feedbackReportButton.addActionListener(e -> generateFeedbackReport());
+
+            reportFrame.setVisible(true);
+        }
+
+        private void generateSalesReport() {
+            JFrame reportFrame = new JFrame("Sales Report");
+            reportFrame.setSize(600, 400);
+            reportFrame.setLayout(new BorderLayout());
+
+            JTextArea reportArea = new JTextArea();
+            reportArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(reportArea);
+
+            try {
+                List<String> paymentLines = Files.readAllLines(Paths.get("paymentLog.txt"));
+                List<String> carLines = Files.readAllLines(Paths.get("carStatus.txt"));
+
+                reportArea.append("=== SALES REPORT ===\n");
+                reportArea.append(String.format("%-10s %-15s %-15s %-10s %-10s%n", 
+                    "CarID", "Model", "Seller", "Price", "Status"));
+                reportArea.append("------------------------------------------------------------\n");
+
+                double totalRevenue = 0;
+                int totalSales = 0;
+
+                for (String paymentLine : paymentLines) {
+                    String[] paymentData = paymentLine.split(", ");
+                    if (paymentData.length >= 3) {
+                        String carId = paymentData[0];
+                        String model = paymentData[1];
+                        String seller = paymentData[2];
+
+                        // Find the car details to get price
+                        for (String carLine : carLines) {
+                            String[] carData = carLine.split(", ");
+                            if (carData.length >= 7 && carData[0].equals(carId)) {
+                                String price = carData[3];
+                                String status = carData[4];
+
+                                reportArea.append(String.format("%-10s %-15s %-15s %-10s %-10s%n", 
+                                    carId, model, seller, price, status));
+
+                                try {
+                                    totalRevenue += Double.parseDouble(price);
+                                    totalSales++;
+                                } catch (NumberFormatException e) {
+                                    // Skip if price is not a valid number
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                reportArea.append("\n=== SUMMARY ===\n");
+                reportArea.append(String.format("Total Sales: %d%n", totalSales));
+                reportArea.append(String.format("Total Revenue: RM%.2f%n", totalRevenue));
+
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(reportFrame, "Error generating sales report: " + e.getMessage());
+            }
+
+            JButton saveButton = new JButton("Save Report");
+            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "sales_report.txt"));
+
+            reportFrame.add(scrollPane, BorderLayout.CENTER);
+            reportFrame.add(saveButton, BorderLayout.SOUTH);
+            reportFrame.setVisible(true);
+        }
+
+        private void generateInventoryReport() {
+            JFrame reportFrame = new JFrame("Inventory Report");
+            reportFrame.setSize(600, 400);
+            reportFrame.setLayout(new BorderLayout());
+
+            JTextArea reportArea = new JTextArea();
+            reportArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(reportArea);
+
+            try {
+                List<String> carLines = Files.readAllLines(Paths.get("carStatus.txt"));
+
+                reportArea.append("=== INVENTORY REPORT ===\n");
+                reportArea.append(String.format("%-10s %-15s %-10s %-10s %-15s %-15s%n", 
+                    "CarID", "Model", "Year", "Price", "Status", "Approval"));
+                reportArea.append("--------------------------------------------------------------------\n");
+
+                int availableCount = 0;
+                int bookedCount = 0;
+                int paidCount = 0;
+                int totalCars = 0;
+
+                for (String carLine : carLines) {
+                    String[] carData = carLine.split(", ");
+                    if (carData.length >= 7) {
+                        reportArea.append(String.format("%-10s %-15s %-10s %-10s %-15s %-15s%n", 
+                            carData[0], carData[1], carData[2], carData[3], carData[4], carData[6]));
+
+                        totalCars++;
+                        switch (carData[4].toLowerCase()) {
+                            case "available":
+                                availableCount++;
+                                break;
+                            case "booked":
+                                bookedCount++;
+                                break;
+                            case "paid":
+                                paidCount++;
+                                break;
+                        }
+                    }
+                }
+
+                reportArea.append("\n=== SUMMARY ===\n");
+                reportArea.append(String.format("Total Cars: %d%n", totalCars));
+                reportArea.append(String.format("Available: %d%n", availableCount));
+                reportArea.append(String.format("Booked: %d%n", bookedCount));
+                reportArea.append(String.format("Paid: %d%n", paidCount));
+
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(reportFrame, "Error generating inventory report: " + e.getMessage());
+            }
+
+            JButton saveButton = new JButton("Save Report");
+            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "inventory_report.txt"));
+
+            reportFrame.add(scrollPane, BorderLayout.CENTER);
+            reportFrame.add(saveButton, BorderLayout.SOUTH);
+            reportFrame.setVisible(true);
+        }
+
+        private void generateUserActivityReport() {
+            JFrame reportFrame = new JFrame("User Activity Report");
+            reportFrame.setSize(600, 400);
+            reportFrame.setLayout(new BorderLayout());
+
+            JTextArea reportArea = new JTextArea();
+            reportArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(reportArea);
+
+            try {
+                List<String> userLines = Files.readAllLines(Paths.get("credentials.txt"));
+                List<String> ownershipLines = Files.exists(Paths.get("ownership.txt")) ? 
+                    Files.readAllLines(Paths.get("ownership.txt")) : new ArrayList<>();
+
+                reportArea.append("=== USER ACTIVITY REPORT ===\n");
+                reportArea.append(String.format("%-15s %-15s %-10s %-15s %-10s%n", 
+                    "Username", "Email", "Role", "Cars Owned", "Status"));
+                reportArea.append("------------------------------------------------------------\n");
+
+                int totalUsers = 0;
+                int activeUsers = 0;
+                int lockedUsers = 0;
+
+                for (String userLine : userLines) {
+                    String[] userData = userLine.split(", ");
+                    if (userData.length >= 4) {
+                        String username = userData[1];
+                        String role = userData[3];
+                        String status = (userData.length > 4 && userData[4].equals("locked")) ? "Locked" : "Active";
+
+                        // Count cars owned by this user
+                        int carsOwned = 0;
+                        for (String ownershipLine : ownershipLines) {
+                            String[] ownershipData = ownershipLine.split(", ");
+                            if (ownershipData.length >= 2 && ownershipData[0].equals(username)) {
+                                carsOwned++;
+                            }
+                        }
+
+                        reportArea.append(String.format("%-15s %-15s %-10s %-15d %-10s%n", 
+                            username, userData[0], role, carsOwned, status));
+
+                        totalUsers++;
+                        if (status.equals("Active")) {
+                            activeUsers++;
+                        } else {
+                            lockedUsers++;
+                        }
+                    }
+                }
+
+                reportArea.append("\n=== SUMMARY ===\n");
+                reportArea.append(String.format("Total Users: %d%n", totalUsers));
+                reportArea.append(String.format("Active Users: %d%n", activeUsers));
+                reportArea.append(String.format("Locked Users: %d%n", lockedUsers));
+
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(reportFrame, "Error generating user activity report: " + e.getMessage());
+            }
+
+            JButton saveButton = new JButton("Save Report");
+            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "user_activity_report.txt"));
+
+            reportFrame.add(scrollPane, BorderLayout.CENTER);
+            reportFrame.add(saveButton, BorderLayout.SOUTH);
+            reportFrame.setVisible(true);
+        }
+
+        private void generateFeedbackReport() {
+            JFrame reportFrame = new JFrame("Feedback Summary Report");
+            reportFrame.setSize(600, 400);
+            reportFrame.setLayout(new BorderLayout());
+
+            JTextArea reportArea = new JTextArea();
+            reportArea.setEditable(false);
+            JScrollPane scrollPane = new JScrollPane(reportArea);
+
+            File feedbackFile = new File("feedbackLog.txt");
+            if (!feedbackFile.exists()) {
+                JOptionPane.showMessageDialog(reportFrame, "No feedback available to generate report");
+                reportFrame.dispose();
+                return;
+            }
+
+            try {
+                List<String> feedbackLines = Files.readAllLines(feedbackFile.toPath());
+
+                reportArea.append("=== FEEDBACK SUMMARY REPORT ===\n");
+                reportArea.append(String.format("%-10s %-15s %-20s %-30s%n", 
+                    "CarID", "Username", "Feedback Excerpt", "Date"));
+                reportArea.append("--------------------------------------------------------------------\n");
+
+                int totalFeedback = 0;
+
+                for (String line : feedbackLines) {
+                    // Assuming format: "CarID: Username - Feedback text - Date"
+                    String[] parts = line.split(" - ");
+                    if (parts.length >= 3) {
+                        String carUserPart = parts[0];
+                        String feedbackText = parts[1];
+                        String date = parts[2];
+
+                        String[] carUser = carUserPart.split(": ");
+                        String carId = carUser.length > 0 ? carUser[0] : "N/A";
+                        String username = carUser.length > 1 ? carUser[1] : "N/A";
+
+                        // Shorten feedback text for display
+                        String excerpt = feedbackText.length() > 25 ? 
+                            feedbackText.substring(0, 25) + "..." : feedbackText;
+
+                        reportArea.append(String.format("%-10s %-15s %-20s %-30s%n", 
+                            carId, username, excerpt, date));
+
+                        totalFeedback++;
+                    }
+                }
+
+                reportArea.append("\n=== SUMMARY ===\n");
+                reportArea.append(String.format("Total Feedback Entries: %d%n", totalFeedback));
+
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(reportFrame, "Error generating feedback report: " + e.getMessage());
+            }
+
+            JButton saveButton = new JButton("Save Report");
+            saveButton.addActionListener(e -> saveReportToFile(reportArea.getText(), "feedback_report.txt"));
+
+            reportFrame.add(scrollPane, BorderLayout.CENTER);
+            reportFrame.add(saveButton, BorderLayout.SOUTH);
+            reportFrame.setVisible(true);
+        }
+
+        private void saveReportToFile(String reportContent, String fileName) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(new File(fileName));
+            int userSelection = fileChooser.showSaveDialog(null);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File fileToSave = fileChooser.getSelectedFile();
+                try {
+                    Files.write(fileToSave.toPath(), reportContent.getBytes());
+                    JOptionPane.showMessageDialog(null, "Report saved successfully to: " + fileToSave.getAbsolutePath());
+                } catch (IOException e) {
+                    JOptionPane.showMessageDialog(null, "Error saving report: " + e.getMessage());
+                }
+            }
+        }*/
