@@ -42,6 +42,21 @@ public class Users {
     private static final String ENROLLMENT_FILE  = "enrollment.txt";
     private static final String PAYMENT_FILE     = "payments.txt";
     private static final String RATING_FILE      = "ratings.txt";
+    private static final String CREDENTIALS_FILE = "credentials.txt";
+    
+    // Create the data files on class load if they don't exist yet
+    static {
+        for (String f : new String[]{CLASS_FILE, ENROLLMENT_FILE, PAYMENT_FILE, RATING_FILE, CREDENTIALS_FILE}) {
+            try {
+                File file = new File(f);
+                if (!file.exists()) {
+                    file.createNewFile();
+                }
+            } catch (IOException e) {
+                System.err.println("Could not create data file: " + f + " -> " + e.getMessage());
+            }
+        }
+    }
 
     private static String generateId(String prefix, String file) { //automatically generate id
         int max = 0;
@@ -413,11 +428,11 @@ public class Users {
         
         //Display all available classes
         List<String[]> classes = readLinesAsRows(CLASS_FILE);
-        classBookingArea.append(String.format("-10s %-20s %-20s %-20s %-10s %-10s %-10s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Cap", "Enrolled", "Price"));
+        classBookingArea.append(String.format("%-10s %-15s %-15s %-15s %-8s %-8s %-8s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Cap", "Enrolled", "Price"));
         classBookingArea.append("------------------------------------------------------------------------------------------------------------------\n");
         for (String[] c: classes){
             if (c.length >= 7){
-                classBookingArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-10s %-10s%n", c[0], c[1], c[2], c[3], c[4], c[5], c[6]));
+                classBookingArea.append(String.format("%-10s %-15s %-15s %-15s %-8s %-8s %-8s%n", c[0], c[1], c[2], c[3], c[4], c[5], c[6]));
             }
         }
         
