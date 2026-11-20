@@ -270,6 +270,10 @@ public class Users {
             new AttendanceOfficerFrame(getUsername()).setVisible(true);
             return;
         }
+        if (normalizedRole.equalsIgnoreCase("Administrator")) {
+            new ood.assignment.adminmodule.AdministratorDashboardFrame(getUsername()).setVisible(true);
+            return;
+        }
         if (normalizedRole.equalsIgnoreCase("Manager")) {
             ManagerDashboard dashboard = new ManagerDashboard();
             dashboard.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);

@@ -16,64 +16,61 @@ public class StaffReportFrame extends javax.swing.JFrame {
      */
     public StaffReportFrame() {
     initComponents();
+    adaptStaffReportLayout();
     loadStaffReport();
 }
     
     private void loadStaffReport() {
-
-    String keyword = SearchTextField.getText().trim().toLowerCase();
-    String selectedRole = cmbRole.getSelectedItem().toString();
-
-    javax.swing.table.DefaultTableModel model =
-        (javax.swing.table.DefaultTableModel) jTable1.getModel();
-
-    model.setRowCount(0);
-
-    try {
-        java.nio.file.Path file =
-            java.nio.file.Paths.get("administrators.txt");
-
-        if (java.nio.file.Files.exists(file)) {
-
-            for (String line : java.nio.file.Files.readAllLines(
-                    file, java.nio.charset.StandardCharsets.UTF_8)) {
-
-                String[] data = line.split("\\|", -1);
-
-                if (data.length != 3) {
-                    continue;
-                }
-
-                String staffID = data[0];
-                String staffName = data[1];
-                String role = "Administrator";
-
-                boolean nameMatch =
-                    staffName.toLowerCase().contains(keyword);
-
-                boolean roleMatch =
-                    selectedRole.equals("All Roles")
-                    || selectedRole.equals(role);
-
-                if (nameMatch && roleMatch) {
-                    model.addRow(new Object[]{
-                        staffID, staffName, role
-                    });
-                }
+        String keyword = SearchTextField.getText().trim().toLowerCase();
+        String selectedRole = String.valueOf(cmbRole.getSelectedItem());
+        javax.swing.table.DefaultTableModel model =
+                (javax.swing.table.DefaultTableModel) jTable1.getModel();
+        try {
+            java.util.List<ood.assignment.adminmodule.Staff> staff =
+                    new ood.assignment.adminmodule.StaffStore().readAll();
+            int admin = 0, instructor = 0, facilities = 0;
+            model.setRowCount(0);
+            for (ood.assignment.adminmodule.Staff row : staff) {
+                if (row.getRole().equals("Administrator")) admin++;
+                if (row.getRole().equals("Instructor")) instructor++;
+                if (row.getRole().equals("Facilities Officer")) facilities++;
+                if ((!selectedRole.equals("All Roles") && !selectedRole.equals(row.getRole()))
+                        || !row.getName().toLowerCase().contains(keyword)) continue;
+                model.addRow(new Object[] { row.getStaffId(), row.getName(), row.getRole() });
             }
+            lblTotalStaff.setText("Administrator: " + admin + " | Instructor: " + instructor
+                    + " | Facilities Officer: " + facilities + " | Total: " + staff.size()
+                    + " | Shown: " + model.getRowCount());
+        } catch (java.io.IOException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Could not load staff report: " + ex.getMessage());
         }
-
-        lblTotalStaff.setText(
-            "Total Staff: " + model.getRowCount()
-        );
-
-    } catch (java.io.IOException ex) {
-        javax.swing.JOptionPane.showMessageDialog(
-            this, "Could not load staff report: "
-            + ex.getMessage()
-        );
     }
-}
+
+    /** Retain NetBeans-generated form code; rearrange existing widgets at runtime for room for totals. */
+    private void adaptStaffReportLayout() {
+        javax.swing.table.DefaultTableModel tm = new javax.swing.table.DefaultTableModel(
+                new String[]{"Staff ID", "Staff Name", "Role"}, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+        jTable1.setModel(tm);
+        cmbRole.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{
+                "All Roles", "Administrator", "Instructor", "Facilities Officer"}));
+        javax.swing.JPanel searchPanel = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        searchPanel.add(new javax.swing.JLabel("Name:"));searchPanel.add(SearchTextField);
+        searchPanel.add(new javax.swing.JLabel("Role:"));searchPanel.add(cmbRole);
+        searchPanel.add(btnStaffSearch);
+        javax.swing.JPanel header = new javax.swing.JPanel(new java.awt.BorderLayout());
+        header.add(jLabel2, java.awt.BorderLayout.NORTH);
+        header.add(searchPanel, java.awt.BorderLayout.SOUTH);
+        getContentPane().removeAll();
+        getContentPane().setLayout(new java.awt.BorderLayout(8,8));
+        getContentPane().add(header,java.awt.BorderLayout.NORTH);
+        getContentPane().add(jScrollPane1,java.awt.BorderLayout.CENTER);
+        getContentPane().add(lblTotalStaff,java.awt.BorderLayout.SOUTH);
+        setSize(820,480);
+        setLocationRelativeTo(null);
+    }
 
     /**
      * This method is called from within the constructor to initialize the form.
