@@ -128,12 +128,30 @@ public class Users {
         return false;
     }
     
-    /** Look up a class row by ID; returns null if not found. */
     private static String[] findClass(String classId) {
         for (String[] c : readLinesAsRows(CLASS_FILE)) {
             if (c.length >= 7 && c[0].equalsIgnoreCase(classId)) return c;
         }
         return null;
+    }
+    
+    private static int countActiveEnrollments(String classId) {
+        int count = 0;
+        for (String[] row : readLinesAsRows(ENROLLMENT_FILE)) {
+            if (row.length >= 3
+                    && row[1].equalsIgnoreCase(classId)
+                    && row[2].equalsIgnoreCase("active")) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    private static String withSuffix(int count, String sampleOriginal) {
+        if (sampleOriginal != null && sampleOriginal.matches("\\d+\\s*students?")) {
+            return count + " students";
+        }
+        return String.valueOf(count);
     }
 
     public void signup() {
@@ -167,7 +185,7 @@ public class Users {
 
             // Check if username already exists
             for (String[] row : readLinesAsRows(CREDENTIALS_FILE)){
-                if (row.length >= 2 && row[1].equalsIgnoreCase(username)){
+                if (row.length >= 2 && row[1].equals(username)){
                     JOptionPane.showMessageDialog(signupFrame, "Username already exists! Please choose a different username.");
                     return;
                 }
@@ -415,9 +433,15 @@ public class Users {
                 return;
             }
 
-            int capacity = Integer.parseInt(target[4]);
-            int enrolled = Integer.parseInt(target[5]);
+            int capacity = parseIntSafe(target[4]);
+            int enrolled = countActiveEnrollments(classId);
 
+            if (capacity <= 0) {
+                JOptionPane.showMessageDialog(bookClassFrame,
+                        "Class capacity is invalid (stored as \"" + target[4] + "\").");
+                return;
+            }
+            
             if (enrolled >= capacity) {
                 JOptionPane.showMessageDialog(bookClassFrame, "Class is full.");
                 return;
@@ -439,13 +463,14 @@ public class Users {
                 return;
             }
 
-            // Increase Enrollment Count once student join
+            // Increase Enrollment Count once student joins
             try {
                 List<String> lines = Files.readAllLines(Paths.get(CLASS_FILE));
                 for (int i = 0; i < lines.size(); i++) {
                     String[] p = lines.get(i).split(", ");
                     if (p.length >= 7 && p[0].equalsIgnoreCase(classId)) {
-                        p[5] = String.valueOf(Integer.parseInt(p[5]) + 1);
+                        int newCount = parseIntSafe(p[5]) + 1;
+                        p[5] = withSuffix(newCount, p[5]);
                         lines.set(i, String.join(", ", p));
                         break;
                     }
@@ -581,7 +606,9 @@ public class Users {
                 JOptionPane.showMessageDialog(rescheduleClassFrame, "New Class ID not found.");
                 return;
             }
-            if (Integer.parseInt(newClass[5]) >= Integer.parseInt(newClass[4])) {
+            int newCap      = parseIntSafe(newClass[4]);
+            int newEnrolled = countActiveEnrollments(newId);
+            if (newEnrolled >= newCap) {
                 JOptionPane.showMessageDialog(rescheduleClassFrame, "New class is full.");
                 return;
             }
@@ -608,10 +635,12 @@ public class Users {
                 for (int i = 0; i < classLines.size(); i++) {
                     String[] p = classLines.get(i).split(", ");
                     if (p.length >= 7 && p[0].equals(oldId)) {
-                        p[5] = String.valueOf(Math.max(0, Integer.parseInt(p[5]) - 1));
+                        int newCount = Math.max(0, parseIntSafe(p[5]) - 1);
+                        p[5] = withSuffix(newCount, p[5]);
                         classLines.set(i, String.join(", ", p));
                     } else if (p.length >= 7 && p[0].equals(newId)) {
-                        p[5] = String.valueOf(Integer.parseInt(p[5]) + 1);
+                        int newCount = parseIntSafe(p[5]) + 1;
+                        p[5] = withSuffix(newCount, p[5]);
                         classLines.set(i, String.join(", ", p));
                     }
                 }
@@ -637,6 +666,7 @@ public class Users {
         
         cancelClassFrame.add(new JLabel("Class ID to cancel:")); //enter class id to cancel
         cancelClassFrame.add(classIdField);
+        cancelClassFrame.add(cancelButton);
 
         cancelButton.addActionListener(e -> {
             String classId = classIdField.getText().trim();
@@ -667,7 +697,8 @@ public class Users {
                 for (int i = 0; i < classLines.size(); i++) {
                     String[] p = classLines.get(i).split(", ");
                     if (p.length >= 7 && p[0].equals(classId)) {
-                        p[5] = String.valueOf(Math.max(0, Integer.parseInt(p[5]) - 1));
+                        int newCount = Math.max(0, parseIntSafe(p[5]) - 1);
+                        p[5] = withSuffix(newCount, p[5]);
                         classLines.set(i, String.join(", ", p));
                         break;
                     }
@@ -821,8 +852,8 @@ public class Users {
         }
         if (!any) paymentHistoryArea.append("You haven't made any payment yet.\n");
 
-        paymentHistoryArea.add(scrollPane, BorderLayout.CENTER);
-        paymentHistoryArea.setVisible(true);
+        paymentHistoryFrame.add(scrollPane, BorderLayout.CENTER);
+        paymentHistoryFrame.setVisible(true);
     }
     
     private void addRating(){
