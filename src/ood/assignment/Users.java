@@ -10,7 +10,7 @@
    (classID, className, instructor, schedule, capacity, enrolled, price)
 
    enrollment.txt:
-   (username, classID, status)
+   (username, classID, status, enrollmentDate)
 
    payments.txt
    (paymentID, username, classID, amount, date, status)
@@ -22,20 +22,18 @@ package ood.assignment;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
-import java.util.*;
-import java.util.List;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.List;
 
 public class Users {
     private String email;
     private String username;
     private String password;
     private String role;
-    private String approve = null;
     private JFrame currentFrame;
     
     private static final String CLASS_FILE       = "classes.txt";
@@ -56,6 +54,35 @@ public class Users {
                 System.err.println("Could not create data file: " + f + " -> " + e.getMessage());
             }
         }
+    }
+    
+    public Users() {}
+    
+    public Users(String email, String username, String password, String role) {
+        this.email = email;
+        this.username = username;
+        this.password = password;
+        this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getRole() {
+        return role;
+    }
+    
+    private static int parseIntSafe(String raw){
+        if (raw == null) return 0;
+        StringBuilder digits = new StringBuilder();
+        for (char ch: raw.trim().toCharArray()){
+            if (Character.isDigit(ch)) digits.append(ch);
+            else break;                     // stop at first non-digit ("10 students" -> "10")
+        }
+        if (digits.length() == 0) return 0;
+        try { return Integer.parseInt(digits.toString()); }
+        catch (NumberFormatException e) { return 0; }
     }
 
     private static String generateId(String prefix, String file) { //automatically generate id
@@ -101,21 +128,12 @@ public class Users {
         return false;
     }
     
-    public Users() {}
-    
-    public Users(String email, String username, String password, String role) {
-        this.email = email;
-        this.username = username;
-        this.password = password;
-        this.role = role;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getRole() {
-        return role;
+    /** Look up a class row by ID; returns null if not found. */
+    private static String[] findClass(String classId) {
+        for (String[] c : readLinesAsRows(CLASS_FILE)) {
+            if (c.length >= 7 && c[0].equalsIgnoreCase(classId)) return c;
+        }
+        return null;
     }
 
     public void signup() {
@@ -123,50 +141,23 @@ public class Users {
         signupFrame.setSize(400, 300);
         signupFrame.setLayout(new GridLayout(5, 2, 10, 10));
 
-        JLabel emailLabel = new JLabel("Email:");
         JTextField emailField = new JTextField();
-        JLabel usernameLabel = new JLabel("Username:");
         JTextField usernameField = new JTextField();
-        JLabel passwordLabel = new JLabel("Password:");
         JPasswordField passwordField = new JPasswordField();
-
         JButton submitButton = new JButton("Submit");
         JButton cancelButton = new JButton("Cancel");
 
-        signupFrame.add(emailLabel);
-        signupFrame.add(emailField);
-        signupFrame.add(usernameLabel);
-        signupFrame.add(usernameField);
-        signupFrame.add(passwordLabel);
-        signupFrame.add(passwordField);
-        signupFrame.add(submitButton);
+        signupFrame.add(new JLabel("Email:"));    signupFrame.add(emailField);
+        signupFrame.add(new JLabel("Username:")); signupFrame.add(usernameField);
+        signupFrame.add(new JLabel("Password:")); signupFrame.add(passwordField);
+        signupFrame.add(submitButton);            
         signupFrame.add(cancelButton);
 
         submitButton.addActionListener(e -> {
-            String email = emailField.getText();
-            String username = usernameField.getText();
+            String email = emailField.getText().trim();
+            String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword());
-            String role = "customer"; // default role
-
-            // Check for special role prefixes
-            if (email.startsWith("/admin") && username.startsWith("/admin") && password.startsWith("/admin")) {
-                role = "admin";
-                email = email.substring(6); // Remove the prefix
-                username = username.substring(6);
-                password = password.substring(6);
-            } 
-            else if (email.startsWith("/sm") && username.startsWith("/sm") && password.startsWith("/sm")) {
-                role = "salesman";
-                email = email.substring(3);
-                username = username.substring(3);
-                password = password.substring(3);
-            }
-            else if (email.startsWith("/sf") && username.startsWith("/sf") && password.startsWith("/sf")) {
-                role = "staff";
-                email = email.substring(3);
-                username = username.substring(3);
-                password = password.substring(3);
-            }
+            String role = "student"; // default role
 
             // Validate the remaining credentials after removing prefixes
             if (email.isEmpty() || username.isEmpty() || password.isEmpty()) {
@@ -175,34 +166,25 @@ public class Users {
             }
 
             // Check if username already exists
-            String credentialsFile = "credentials.txt";
-            try {
-                // Read existing credentials to check for duplicate username
-                File file = new File(credentialsFile);
-                if (file.exists()) {
-                    Scanner scanner = new Scanner(file);
-                    while (scanner.hasNextLine()) {
-                        String line = scanner.nextLine();
-                        String[] parts = line.split(", ");
-                        if (parts.length >= 2 && parts[1].equalsIgnoreCase(username)) {
-                            JOptionPane.showMessageDialog(signupFrame, "Username already exists! Please choose a different username.");
-                            scanner.close();
-                            return;
-                        }
-                    }
-                    scanner.close();
+            for (String[] row : readLinesAsRows(CREDENTIALS_FILE)){
+                if (row.length >= 2 && row[1].equalsIgnoreCase(username)){
+                    JOptionPane.showMessageDialog(signupFrame, "Username already exists! Please choose a different username.");
+                    return;
                 }
-
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(credentialsFile, true))) {
-                    writer.write(email + ", " + username + ", " + password + ", " + role);
-                    writer.newLine();
-                }
-                JOptionPane.showMessageDialog(signupFrame, "Account created successfully!");
-                signupFrame.dispose();
-                login();
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(signupFrame, "An error occurred during sign up: " + ex.getMessage());
             }
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(CREDENTIALS_FILE, true))) {
+                writer.write(email + ", " + username + ", " + password + ", " + role);
+                writer.newLine();
+            }
+            catch (IOException ex) {
+                JOptionPane.showMessageDialog(signupFrame, "An error occurred during sign up: " + ex.getMessage());
+                return;
+            }
+            
+            JOptionPane.showMessageDialog(signupFrame, "Account created successfully!");
+            signupFrame.dispose();
+            login();
         });
 
         cancelButton.addActionListener(e -> signupFrame.dispose());
@@ -214,77 +196,50 @@ public class Users {
         loginFrame.setSize(400, 200);
         loginFrame.setLayout(new GridLayout(3, 2, 10, 10));
         
-        JLabel usernameLabel = new JLabel("Username:");
         JTextField usernameField = new JTextField();
-        JLabel passwordLabel = new JLabel("Password:");
         JPasswordField passwordField = new JPasswordField();
         JButton loginButton = new JButton("Login");
         JButton cancelButton = new JButton("Cancel");
         
-        loginFrame.add(usernameLabel);
-        loginFrame.add(usernameField);
-        loginFrame.add(passwordLabel);
-        loginFrame.add(passwordField);
+        loginFrame.add(new JLabel("Username: ")); loginFrame.add(usernameField);
+        loginFrame.add(new JLabel("Password: ")); loginFrame.add(passwordField);
         loginFrame.add(loginButton);
         loginFrame.add(cancelButton);
         
         loginButton.addActionListener(e -> {
-            String usernameInput = usernameField.getText();
+            String usernameInput = usernameField.getText().trim();
             String passwordInput = new String(passwordField.getPassword());
-            String credentialsFile = "credentials.txt";
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(credentialsFile))) {
-                if (!new File(credentialsFile).exists()) {
-                    JOptionPane.showMessageDialog(loginFrame, "No account exists. Please sign up first.");
-                    signup();
-                    loginFrame.dispose();
-                    return;
-                }
-
-                boolean loginSuccess = false;
-                boolean accountLocked = false;
-                String line;
-                String[] credentials = null;
-
-                while ((line = reader.readLine()) != null) {
-                    credentials = line.split(", ");
-                    if (credentials.length >= 4 && credentials[1].equals(usernameInput)) {
-                        // Check if account is locked
-                        if (credentials.length > 4 && Arrays.asList(credentials).contains("locked")) {
-                            accountLocked = true;
-                            break;
-                        }
-
-                        if (credentials[2].equals(passwordInput)) {
-                            this.email = credentials[0];
-                            this.username = credentials[1];
-                            this.password = credentials[2];
-                            this.role = credentials[3];
-                            this.approve = (credentials.length > 4) ? credentials[4] : null;
-                            loginSuccess = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (accountLocked) {
-                    JOptionPane.showMessageDialog(loginFrame, "Your account is locked. Please contact an administrator.");
-                    return;
-                }
-
-                if (loginSuccess) {
-                    JOptionPane.showMessageDialog(loginFrame, "Login successful. Welcome!");
-                    loginFrame.dispose();
-                    Users user = new Users(credentials[0], credentials[1], credentials[2], credentials[3]);
-                    user.userMenu();
-                } else {
-                    JOptionPane.showMessageDialog(loginFrame, "Invalid username and/or password.");
-                }
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(loginFrame, "An error occurred during login: " + ex.getMessage());
+            if (!new File(CREDENTIALS_FILE).exists()) {
+                JOptionPane.showMessageDialog(loginFrame, "No account exists. Please sign up first.");
+                loginFrame.dispose();
+                signup();
+                return;
             }
+
+            boolean loginSuccess = false;
+            String[] matched = null;
+            for (String[] row : readLinesAsRows(CREDENTIALS_FILE)) {
+                if (row.length >= 4 && row[1].equals(usernameInput)) {
+                    if (row[2].equals(passwordInput)) { matched = row; loginSuccess = true; break; }
+                }
+            }
+
+            if (!loginSuccess) {
+                JOptionPane.showMessageDialog(loginFrame, "Invalid username and/or password.");
+                return;
+            }
+
+            this.email    = matched[0];
+            this.username = matched[1];
+            this.password = matched[2];
+            this.role     = matched[3];
+
+            JOptionPane.showMessageDialog(loginFrame, "Login successful. Welcome!");
+            loginFrame.dispose();
+            new Users(email, username, password, role).userMenu();
         });
-        
+
         cancelButton.addActionListener(e -> loginFrame.dispose());
         loginFrame.setVisible(true);
         return false;
@@ -473,9 +428,11 @@ public class Users {
                 return;
             }
 
+            String currentDate = LocalDate.now().toString();
+            
             //writes into text file student has joined class
             try (BufferedWriter w = new BufferedWriter(new FileWriter(ENROLLMENT_FILE, true))) {
-                w.write(getUsername() + ", " + classId + ", active");
+                w.write(getUsername() + ", " + classId + ", active, " + currentDate);
                 w.newLine();
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(bookClassFrame, "Error saving enrollment: " + ex.getMessage());
@@ -514,7 +471,7 @@ public class Users {
         
         //display all classes
         classViewArea.append("=== YOUR ENROLLED CLASSES ===\n");
-        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Status"));
+        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-20s%n", "ClassID", "Class Name", "Instructor", "Schedule", "Status", "Enrollment Date"));
         classViewArea.append("--------------------------------------------------------------------------------------------\n");
         
         List<String[]> enrollments = readLinesAsRows(ENROLLMENT_FILE);
@@ -525,8 +482,8 @@ public class Users {
             if (en.length >= 3 && en[0].equals(getUsername()) && en[2].equalsIgnoreCase("active")) { //check is user is active
                 for (String[] c : classes) {
                     if (c.length >= 7 && c[0].equals(en[1])) {
-                        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s%n",
-                                c[0], c[1], c[2], c[3], en[2]));
+                        classViewArea.append(String.format("%-10s %-20s %-20s %-20s %-10s %-20s%n",
+                                c[0], c[1], c[2], c[3], en[2], en[3]));
                         any = true;
                         break;
                     }
@@ -1821,4 +1778,26 @@ public class Users {
                     JOptionPane.showMessageDialog(null, "Error saving report: " + e.getMessage());
                 }
             }
-        }*/
+        }
+
+            // Check for special role prefixes
+            if (email.startsWith("/admin") && username.startsWith("/admin") && password.startsWith("/admin")) {
+                role = "admin";
+                email = email.substring(6); // Remove the prefix
+                username = username.substring(6);
+                password = password.substring(6);
+            } 
+            else if (email.startsWith("/sm") && username.startsWith("/sm") && password.startsWith("/sm")) {
+                role = "salesman";
+                email = email.substring(3);
+                username = username.substring(3);
+                password = password.substring(3);
+            }
+            else if (email.startsWith("/sf") && username.startsWith("/sf") && password.startsWith("/sf")) {
+                role = "staff";
+                email = email.substring(3);
+                username = username.substring(3);
+                password = password.substring(3);
+            }
+
+*/
