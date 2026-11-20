@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import ood.assignment.manager.ManagerDashboard;
 
 public class Users {
     private String email;
@@ -290,7 +291,19 @@ public class Users {
         return false;
     }
     
-    public void userMenu() { //student menu
+    public void userMenu() {
+        String normalizedRole = role == null ? "" : role.strip().replaceAll("[ _-]+", "");
+        if (normalizedRole.equalsIgnoreCase("AttendanceOfficer")) {
+            new AttendanceOfficerFrame(getUsername()).setVisible(true);
+            return;
+        }
+        if (normalizedRole.equalsIgnoreCase("Manager")) {
+            ManagerDashboard dashboard = new ManagerDashboard();
+            dashboard.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            dashboard.setLocationRelativeTo(null);
+            dashboard.setVisible(true);
+            return;
+        }
         currentFrame = new JFrame("Student Menu");
         currentFrame.setSize(500, 400);  
         currentFrame.setLayout(new BorderLayout());
@@ -899,6 +912,18 @@ public class Users {
             }
             if (!isEnrolled(getUsername(), classId)) {
                 JOptionPane.showMessageDialog(addRatingFrame, "You can only rate classes you are enrolled in.");
+                return;
+            }
+
+            try {
+                if (!new AttendanceService().canRate(getUsername(), classId)) {
+                    JOptionPane.showMessageDialog(addRatingFrame,
+                            "You can rate a class after the Attendance Officer marks you Present or Late.");
+                    return;
+                }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(addRatingFrame,
+                        "Could not verify your attendance: " + ex.getMessage());
                 return;
             }
 
