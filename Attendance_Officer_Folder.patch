@@ -1,0 +1,75 @@
+diff --git a/src/ood/assignment/Users.java b/src/ood/assignment/Users.java
+index 591c6a2..15a2815 100644
+--- a/src/ood/assignment/Users.java
++++ b/src/ood/assignment/Users.java
+@@ -26,6 +26,8 @@ import java.io.*;
+ import java.nio.file.*;
+ import java.time.LocalDate;
+ import java.time.format.DateTimeFormatter;
++import ood.assignment.attendance.AttendanceOfficerFrame;
++import ood.assignment.attendance.AttendanceService;
+ import ood.assignment.manager.ManagerDashboard;
+ import java.util.*;
+ import java.util.List;
+diff --git a/src/ood/assignment/AttendanceOfficerFrame.java b/src/ood/assignment/attendance/AttendanceOfficerFrame.java
+similarity index 99%
+rename from src/ood/assignment/AttendanceOfficerFrame.java
+rename to src/ood/assignment/attendance/AttendanceOfficerFrame.java
+index 3a88efe..e00e7bc 100644
+--- a/src/ood/assignment/AttendanceOfficerFrame.java
++++ b/src/ood/assignment/attendance/AttendanceOfficerFrame.java
+@@ -1,4 +1,4 @@
+-package ood.assignment;
++package ood.assignment.attendance;
+ 
+ import java.awt.BorderLayout;
+ import java.awt.CardLayout;
+@@ -21,7 +21,7 @@ import java.util.TreeMap;
+ import javax.swing.*;
+ import javax.swing.table.DefaultTableModel;
+ 
+-final class AttendanceOfficerFrame extends JFrame {
++public final class AttendanceOfficerFrame extends JFrame {
+     private final AttendanceService service = new AttendanceService();
+     private final JComboBox<AttendanceService.Session> classes = new JComboBox<>();
+     private final JComboBox<AttendanceService.Status> status =
+@@ -45,7 +45,7 @@ final class AttendanceOfficerFrame extends JFrame {
+     private final JTextField dateFilter = new JTextField(12);
+     private final JTabbedPane dataTabs = new JTabbedPane();
+ 
+-    AttendanceOfficerFrame(String username) {
++    public AttendanceOfficerFrame(String username) {
+         super("SDAMS — Attendance Officer");
+         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+         JPanel page = new JPanel(new BorderLayout(0, 12));
+diff --git a/src/ood/assignment/AttendanceService.java b/src/ood/assignment/attendance/AttendanceService.java
+similarity index 98%
+rename from src/ood/assignment/AttendanceService.java
+rename to src/ood/assignment/attendance/AttendanceService.java
+index 25ec93b..6712069 100644
+--- a/src/ood/assignment/AttendanceService.java
++++ b/src/ood/assignment/attendance/AttendanceService.java
+@@ -1,4 +1,4 @@
+-package ood.assignment;
++package ood.assignment.attendance;
+ 
+ import java.io.IOException;
+ import java.nio.file.Files;
+@@ -20,7 +20,7 @@ import java.util.TreeSet;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+ 
+-final class AttendanceService {
++public final class AttendanceService {
+     static final ZoneId ACADEMY_ZONE = ZoneId.of("Asia/Kuala_Lumpur");
+     private static final Path CLASSES = Path.of("classes.txt");
+     private static final Path ENROLLMENT = Path.of("enrollment.txt");
+@@ -120,7 +120,7 @@ final class AttendanceService {
+         return List.copyOf(readEntries().values());
+     }
+ 
+-    boolean canRate(String student, String classId) throws IOException {
++    public boolean canRate(String student, String classId) throws IOException {
+         Entry entry = readEntries().get(new Key(student, classId));
+         return entry != null && entry.status() != Status.ABSENT;
+     }

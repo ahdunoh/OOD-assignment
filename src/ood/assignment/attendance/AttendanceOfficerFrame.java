@@ -1,4 +1,4 @@
-package ood.assignment;
+package ood.assignment.attendance;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -21,7 +21,7 @@ import java.util.TreeMap;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-final class AttendanceOfficerFrame extends JFrame {
+public final class AttendanceOfficerFrame extends JFrame {
     private final AttendanceService service = new AttendanceService();
     private final JComboBox<AttendanceService.Session> classes = new JComboBox<>();
     private final JComboBox<AttendanceService.Status> status =
@@ -45,7 +45,7 @@ final class AttendanceOfficerFrame extends JFrame {
     private final JTextField dateFilter = new JTextField(12);
     private final JTabbedPane dataTabs = new JTabbedPane();
 
-    AttendanceOfficerFrame(String username) {
+    public AttendanceOfficerFrame(String username) {
         super("SDAMS — Attendance Officer");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         JPanel page = new JPanel(new BorderLayout(0, 12));

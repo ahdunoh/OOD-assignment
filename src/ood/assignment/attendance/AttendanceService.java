@@ -1,4 +1,4 @@
-package ood.assignment;
+package ood.assignment.attendance;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,7 +20,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class AttendanceService {
+public final class AttendanceService {
     static final ZoneId ACADEMY_ZONE = ZoneId.of("Asia/Kuala_Lumpur");
     private static final Path CLASSES = Path.of("classes.txt");
     private static final Path ENROLLMENT = Path.of("enrollment.txt");
@@ -120,7 +120,7 @@ final class AttendanceService {
         return List.copyOf(readEntries().values());
     }
 
-    boolean canRate(String student, String classId) throws IOException {
+    public boolean canRate(String student, String classId) throws IOException {
         Entry entry = readEntries().get(new Key(student, classId));
         return entry != null && entry.status() != Status.ABSENT;
     }
