@@ -1,4 +1,4 @@
 C01, Karate, Mr. Li, 9:00 - 11:00, 5, 0 students, 80
 C02, Muay Thai, Mr. Abdul, 10:00 - 12:00, 7, 0 students, 70
-C03, TaeKwanDo, Mr. Chai, 8:30 - 11:30, 8, 0 students, 75
+C03, TaeKwanDo, Mr. Chai, 8:30 - 11:30, 8, 1 students, 75
 MPU-256, FIS, instructor_test, 2026-11-20 10:30, 50, 0, 156

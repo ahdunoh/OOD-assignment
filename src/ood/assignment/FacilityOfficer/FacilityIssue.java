@@ -15,9 +15,73 @@ public class FacilityIssue extends javax.swing.JFrame {
     /**
      * Creates new form FacilityIssue
      */
+    private final FacilityReportStore store =
+            new FacilityReportStore(java.nio.file.Path.of("facility-reports.txt"));
+
     public FacilityIssue() {
         initComponents();
+        configureIssuePage();
         ood.assignment.WindowNavigation.install(this);
+        loadIssues();
+    }
+
+    private void configureIssuePage() {
+        setTitle("Facility Problem Management");
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(
+                new String[]{"Report ID", "Instructor", "Location", "Description", "Status"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        problemtable.setModel(model);
+        problemtable.setAutoCreateRowSorter(true);
+        problemtable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        problemtable.getTableHeader().setReorderingAllowed(false);
+        problemtable.setRowHeight(24);
+
+        javax.swing.JPanel heading = new javax.swing.JPanel(new java.awt.BorderLayout(0, 10));
+        heading.add(jLabel1, java.awt.BorderLayout.NORTH);
+        javax.swing.JPanel search = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        searchfield.setColumns(25);
+        search.add(jLabel2);
+        search.add(searchfield);
+        javax.swing.JButton searchButton = new javax.swing.JButton("Search");
+        searchButton.addActionListener(event -> loadIssues());
+        search.add(searchButton);
+        heading.add(search, java.awt.BorderLayout.SOUTH);
+        javax.swing.JPanel actions = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+        actions.add(Uodatestatusbutton);
+
+        javax.swing.JPanel page = new javax.swing.JPanel(new java.awt.BorderLayout(10, 10));
+        page.setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        page.add(heading, java.awt.BorderLayout.NORTH);
+        page.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+        page.add(actions, java.awt.BorderLayout.SOUTH);
+        setContentPane(page);
+        setSize(950, 520);
+    }
+
+    private void loadIssues() {
+        String query = searchfield.getText().trim().toLowerCase(java.util.Locale.ROOT);
+        try {
+            java.util.List<FacilityReportStore.Report> reports = store.read();
+            javax.swing.table.DefaultTableModel model =
+                    (javax.swing.table.DefaultTableModel) problemtable.getModel();
+            model.setRowCount(0);
+            for (FacilityReportStore.Report report : reports) {
+                String searchable = String.join(" ", report.id(), report.instructor(),
+                        report.location(), report.description(), report.status());
+                if (searchable.toLowerCase(java.util.Locale.ROOT).contains(query)) {
+                    model.addRow(new Object[]{report.id(), report.instructor(),
+                        report.location(), report.description(), report.status()});
+                }
+            }
+        } catch (java.io.IOException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Could not load facility reports: " + ex.getMessage(),
+                    "File error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**
@@ -101,7 +165,7 @@ public class FacilityIssue extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void searchfieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchfieldActionPerformed
-        // TODO add your handling code here:
+        loadIssues();
     }//GEN-LAST:event_searchfieldActionPerformed
 
     private void UodatestatusbuttonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UodatestatusbuttonActionPerformed
@@ -116,10 +180,25 @@ public class FacilityIssue extends javax.swing.JFrame {
             return;
         }
 
-        javax.swing.JOptionPane.showMessageDialog(
-            this,
-            "Facility issue selected."
-        );
+        int modelRow = problemtable.convertRowIndexToModel(selectedRow);
+        String id = problemtable.getModel().getValueAt(modelRow, 0).toString();
+        String currentStatus = problemtable.getModel().getValueAt(modelRow, 4).toString();
+        Object selectedStatus = javax.swing.JOptionPane.showInputDialog(
+                this, "Select the new status:", "Update Facility Issue Status",
+                javax.swing.JOptionPane.QUESTION_MESSAGE, null,
+                FacilityReportStore.STATUSES.toArray(), currentStatus);
+        if (selectedStatus == null) {
+            return;
+        }
+        try {
+            store.updateStatus(id, selectedStatus.toString());
+            loadIssues();
+            javax.swing.JOptionPane.showMessageDialog(this, "Facility issue status updated.");
+        } catch (java.io.IOException ex) {
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Could not update status: " + ex.getMessage(),
+                    "File error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_UodatestatusbuttonActionPerformed
 
     /**

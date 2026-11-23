@@ -20,6 +20,7 @@
 */
 package ood.assignment;
 
+import ood.assignment.instructor.Instructor;
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
@@ -40,10 +41,10 @@ public class Users {
     private JFrame currentFrame;
     protected JFrame navigationParent;
     
-    static final String CLASS_FILE       = "classes.txt";
+    protected static final String CLASS_FILE       = "classes.txt";
     private static final String ENROLLMENT_FILE  = "enrollment.txt";
     private static final String PAYMENT_FILE     = "payments.txt";
-    static final String RATING_FILE      = "ratings.txt";
+    protected static final String RATING_FILE      = "ratings.txt";
     private static final String CREDENTIALS_FILE = "credentials.txt";
     
     // Create the data files on class load if they don't exist yet
@@ -279,27 +280,36 @@ public class Users {
     
     public void userMenu() {
         String normalizedRole = role == null ? "" : role.strip().replaceAll("[ _-]+", "");
-        if (normalizedRole.equalsIgnoreCase("AttendanceOfficer")) {
-            WindowNavigation.show(new AttendanceOfficerFrame(getUsername()), navigationParent);
-            return;
-        }
-        if (normalizedRole.equalsIgnoreCase("Administrator")
-                || normalizedRole.equalsIgnoreCase("Admin")) {
-            WindowNavigation.show(new ood.assignment.adminmodule.AdministratorDashboardFrame(getUsername()), navigationParent);
-            return;
-        }
-        if (normalizedRole.equalsIgnoreCase("Manager")) {
-            ManagerDashboard dashboard = new ManagerDashboard();
-            dashboard.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-            dashboard.setLocationRelativeTo(null);
-            WindowNavigation.show(dashboard, navigationParent);
-            return;
-        }
-        if (normalizedRole.equalsIgnoreCase("Instructor")) {
-            Instructor instructor = new Instructor(email, username, password, role);
-            instructor.navigationParent = navigationParent;
-            instructor.userMenu();
-            return;
+        switch (normalizedRole.toLowerCase(Locale.ROOT)) {
+            case "manager" -> {
+                WindowNavigation.show(new ManagerDashboard(), navigationParent);
+                return;
+            }
+            case "administrator", "admin" -> {
+                WindowNavigation.show(
+                        new ood.assignment.adminmodule.AdministratorDashboardFrame(getUsername()),
+                        navigationParent);
+                return;
+            }
+            case "facilitiesofficer", "facilityofficer", "officer" -> {
+                WindowNavigation.show(
+                        new ood.assignment.FacilityOfficer.FacilitiesOfficer(getUsername()),
+                        navigationParent);
+                return;
+            }
+            case "attendanceofficer" -> {
+                WindowNavigation.show(new AttendanceOfficerFrame(getUsername()), navigationParent);
+                return;
+            }
+            case "instructor" -> {
+                Instructor instructor = new Instructor(email, username, password, role);
+                instructor.navigationParent = navigationParent;
+                instructor.userMenu();
+                return;
+            }
+            default -> {
+                // Preserve the student menu for existing student/customer accounts.
+            }
         }
         currentFrame = new JFrame("Student Menu");
         currentFrame.setSize(500, 400);  

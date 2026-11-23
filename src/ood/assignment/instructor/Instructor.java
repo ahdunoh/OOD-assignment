@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package ood.assignment;
+package ood.assignment.instructor;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -19,6 +19,8 @@ import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
+import ood.assignment.Users;
+import ood.assignment.WindowNavigation;
 /**
  *
  * @author kendrickyonatan2gmail.com
@@ -28,7 +30,7 @@ public class Instructor extends Users {
     private final DefaultTableModel schedule = readOnlyModel(new Object[0][],
             new String[]{"Class ID", "Class Name", "Schedule", "Capacity", "Enrolled", "Price", "Status"});
     private final DefaultTableModel reports = readOnlyModel(new Object[0][],
-            new String[]{"Report ID", "Location", "Description"});
+            new String[]{"Report ID", "Location", "Description", "Status"});
 
     public Instructor(String email, String username, String password, String role) {
         super(email, username, password, role);
@@ -226,9 +228,13 @@ public class Instructor extends Users {
             try {
                 if (row < 0) {
                     String id = UUID.randomUUID().toString();
-                    appendRecord(REPORT_FILE, id, id + ", " + getUsername() + ", " + data);
+                    appendRecord(REPORT_FILE, id, id + ", " + getUsername() + ", " + data + ", Pending");
                 } else if (!changeRecord(parent, REPORT_FILE, value(reports, row, 0), 1,
-                        fields -> fields[0] + ", " + fields[1] + ", " + data)) {
+                        fields -> {
+                            fields[2] = encode(reportLocation);
+                            fields[3] = encode(reportDescription);
+                            return String.join(", ", fields);
+                        })) {
                     continue;
                 }
                 reloadReports(parent);
@@ -245,8 +251,9 @@ public class Instructor extends Users {
             reports.setRowCount(0);
             for (String line : lines) {
                 String[] fields = line.split(", ", -1);
-                if (fields.length == 4 && getUsername().equals(fields[1])) {
-                    reports.addRow(new Object[]{fields[0], decode(fields[2]), decode(fields[3])});
+                if (fields.length >= 4 && getUsername().equals(fields[1])) {
+                    String status = fields.length < 5 || fields[4].isBlank() ? "Pending" : fields[4];
+                    reports.addRow(new Object[]{fields[0], decode(fields[2]), decode(fields[3]), status});
                 }
             }
         } catch (IOException | IllegalArgumentException ex) {
