@@ -39,10 +39,10 @@ public class Users {
     private String role;
     private JFrame currentFrame;
     
-    private static final String CLASS_FILE       = "classes.txt";
+    static final String CLASS_FILE       = "classes.txt";
     private static final String ENROLLMENT_FILE  = "enrollment.txt";
     private static final String PAYMENT_FILE     = "payments.txt";
-    private static final String RATING_FILE      = "ratings.txt";
+    static final String RATING_FILE      = "ratings.txt";
     private static final String CREDENTIALS_FILE = "credentials.txt";
     
     // Create the data files on class load if they don't exist yet
