@@ -34,6 +34,7 @@ import javax.swing.JOptionPane;
         setLocationRelativeTo(null);
         txtSearch.setToolTipText("Enter ID or Name");
         loadAdministratorTable();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private void fillFieldsFromSelection() {
@@ -526,7 +527,7 @@ import javax.swing.JOptionPane;
         // TODO add your handling code here:
         StaffReportFrame report = new StaffReportFrame();
         report.setLocationRelativeTo(this);
-        report.setVisible(true);
+        ood.assignment.WindowNavigation.show(report, this);
     }//GEN-LAST:event_StockButtonActionPerformed
 
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed

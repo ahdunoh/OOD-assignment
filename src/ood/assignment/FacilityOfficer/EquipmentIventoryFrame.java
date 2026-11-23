@@ -39,6 +39,7 @@ public class EquipmentIventoryFrame extends javax.swing.JFrame {
             }
         });
         refreshEquipmentTable("");
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private void refreshEquipmentTable(String keyword) {
@@ -470,7 +471,7 @@ public class EquipmentIventoryFrame extends javax.swing.JFrame {
         // TODO add your handling code here:
         StockReportFrame report = new StockReportFrame();
         report.setLocationRelativeTo(this);
-        report.setVisible(true);
+        ood.assignment.WindowNavigation.show(report, this);
     }//GEN-LAST:event_StockButtonActionPerformed
 
     /**

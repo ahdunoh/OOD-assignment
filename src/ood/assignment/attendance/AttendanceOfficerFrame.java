@@ -75,6 +75,7 @@ public final class AttendanceOfficerFrame extends JFrame {
         setSize(1050, 570);
         setLocationRelativeTo(null);
         refreshClasses();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private JPanel buildRosterPanel() {

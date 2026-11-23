@@ -19,6 +19,7 @@ public class ManagerDashboard extends javax.swing.JFrame {
      */
     public ManagerDashboard() {
         initComponents();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     /**
@@ -73,15 +74,15 @@ public class ManagerDashboard extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnAdministratorsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAdministratorsActionPerformed
-        new AdministratorManagementFrame().setVisible(true);
+        ood.assignment.WindowNavigation.show(new AdministratorManagementFrame(), this);
     }//GEN-LAST:event_btnAdministratorsActionPerformed
 
     private void btnStaffReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStaffReportActionPerformed
-        new StaffReportFrame().setVisible(true);
+        ood.assignment.WindowNavigation.show(new StaffReportFrame(), this);
     }//GEN-LAST:event_btnStaffReportActionPerformed
 
     private void btnRevenueReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRevenueReportActionPerformed
-        new RevenueReportFrame().setVisible(true);
+        ood.assignment.WindowNavigation.show(new RevenueReportFrame(), this);
     }//GEN-LAST:event_btnRevenueReportActionPerformed
 
     /**

@@ -17,6 +17,7 @@ public class FacilityIssue extends javax.swing.JFrame {
      */
     public FacilityIssue() {
         initComponents();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     /**

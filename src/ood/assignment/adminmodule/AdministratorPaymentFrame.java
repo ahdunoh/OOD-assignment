@@ -64,6 +64,7 @@ public class AdministratorPaymentFrame extends JFrame {
             reload();
         });
         reload();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private LocalDate parseDate(String value, String label) {

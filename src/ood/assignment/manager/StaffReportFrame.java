@@ -18,7 +18,8 @@ public class StaffReportFrame extends javax.swing.JFrame {
     initComponents();
     adaptStaffReportLayout();
     loadStaffReport();
-}
+    ood.assignment.WindowNavigation.install(this);
+    }
     
     private void loadStaffReport() {
         String keyword = SearchTextField.getText().trim().toLowerCase();

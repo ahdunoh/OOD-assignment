@@ -38,6 +38,7 @@ public class Users {
     private String password;
     private String role;
     private JFrame currentFrame;
+    protected JFrame navigationParent;
     
     static final String CLASS_FILE       = "classes.txt";
     private static final String ENROLLMENT_FILE  = "enrollment.txt";
@@ -158,6 +159,10 @@ public class Users {
     }
 
     public void signup() {
+        signup(null);
+    }
+
+    public void signup(JFrame parent) {
         JFrame signupFrame = new JFrame("Sign Up");
         signupFrame.setSize(400, 300);
         signupFrame.setLayout(new GridLayout(5, 2, 10, 10));
@@ -205,14 +210,18 @@ public class Users {
             
             JOptionPane.showMessageDialog(signupFrame, "Account created successfully!");
             signupFrame.dispose();
-            login();
+            login(parent);
         });
 
         cancelButton.addActionListener(e -> signupFrame.dispose());
-        signupFrame.setVisible(true);
+        WindowNavigation.show(signupFrame, parent);
     }
     
-    public boolean login() { //login functionality
+    public boolean login() {
+        return login(null);
+    }
+
+    public boolean login(JFrame parent) { //login functionality
         JFrame loginFrame = new JFrame("Login");
         loginFrame.setSize(400, 200);
         loginFrame.setLayout(new GridLayout(3, 2, 10, 10));
@@ -234,7 +243,7 @@ public class Users {
             if (!new File(CREDENTIALS_FILE).exists()) {
                 JOptionPane.showMessageDialog(loginFrame, "No account exists. Please sign up first.");
                 loginFrame.dispose();
-                signup();
+                signup(parent);
                 return;
             }
 
@@ -257,30 +266,39 @@ public class Users {
             this.role     = matched[3];
 
             JOptionPane.showMessageDialog(loginFrame, "Login successful. Welcome!");
-            loginFrame.dispose();
-            new Users(email, username, password, role).userMenu();
+            Users loggedInUser = new Users(email, username, password, role);
+            loggedInUser.navigationParent = loginFrame;
+            loggedInUser.userMenu();
+            passwordField.setText("");
         });
 
         cancelButton.addActionListener(e -> loginFrame.dispose());
-        loginFrame.setVisible(true);
+        WindowNavigation.show(loginFrame, parent);
         return false;
     }
     
     public void userMenu() {
         String normalizedRole = role == null ? "" : role.strip().replaceAll("[ _-]+", "");
         if (normalizedRole.equalsIgnoreCase("AttendanceOfficer")) {
-            new AttendanceOfficerFrame(getUsername()).setVisible(true);
+            WindowNavigation.show(new AttendanceOfficerFrame(getUsername()), navigationParent);
             return;
         }
-        if (normalizedRole.equalsIgnoreCase("Administrator")) {
-            new ood.assignment.adminmodule.AdministratorDashboardFrame(getUsername()).setVisible(true);
+        if (normalizedRole.equalsIgnoreCase("Administrator")
+                || normalizedRole.equalsIgnoreCase("Admin")) {
+            WindowNavigation.show(new ood.assignment.adminmodule.AdministratorDashboardFrame(getUsername()), navigationParent);
             return;
         }
         if (normalizedRole.equalsIgnoreCase("Manager")) {
             ManagerDashboard dashboard = new ManagerDashboard();
             dashboard.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             dashboard.setLocationRelativeTo(null);
-            dashboard.setVisible(true);
+            WindowNavigation.show(dashboard, navigationParent);
+            return;
+        }
+        if (normalizedRole.equalsIgnoreCase("Instructor")) {
+            Instructor instructor = new Instructor(email, username, password, role);
+            instructor.navigationParent = navigationParent;
+            instructor.userMenu();
             return;
         }
         currentFrame = new JFrame("Student Menu");
@@ -305,19 +323,19 @@ public class Users {
         currentFrame.add(welcomeLabel, BorderLayout.NORTH);
         currentFrame.add(buttonPanel, BorderLayout.CENTER);
 
-        classManagementButton.addActionListener(e -> manageClass());
-        paymentManagementButton.addActionListener(e -> managePayment());
-        instructorRatingButton.addActionListener(e -> instructorRatings());
+        classManagementButton.addActionListener(e -> manageClass(currentFrame));
+        paymentManagementButton.addActionListener(e -> managePayment(currentFrame));
+        instructorRatingButton.addActionListener(e -> instructorRatings(currentFrame));
         updateProfileButton.addActionListener(e -> updateProfile());
         logoutButton.addActionListener(e -> {
             logout();
             currentFrame.dispose();
         });
 
-        currentFrame.setVisible(true);
+        WindowNavigation.show(currentFrame, navigationParent);
     }
     
-    private void manageClass() {
+    private void manageClass(JFrame parent) {
             JFrame classManagementFrame = new JFrame("User Management");
             classManagementFrame.setSize(400, 300);
             classManagementFrame.setLayout(new BorderLayout());
@@ -340,17 +358,17 @@ public class Users {
             
             classManagementFrame.add(buttonPanel, BorderLayout.CENTER);
             
-            bookClassButton.addActionListener(e -> bookClass());
-            viewClassButton.addActionListener(e -> viewClass());
-            searchClassButton.addActionListener(e -> searchClass());
-            rescheduleClassButton.addActionListener(e -> rescheduleClass());
-            cancelClassButton.addActionListener(e -> cancelClass());
+            bookClassButton.addActionListener(e -> bookClass(classManagementFrame));
+            viewClassButton.addActionListener(e -> viewClass(classManagementFrame));
+            searchClassButton.addActionListener(e -> searchClass(classManagementFrame));
+            rescheduleClassButton.addActionListener(e -> rescheduleClass(classManagementFrame));
+            cancelClassButton.addActionListener(e -> cancelClass(classManagementFrame));
             backButton.addActionListener(e -> classManagementFrame.dispose());
             
-            classManagementFrame.setVisible(true);
+            WindowNavigation.show(classManagementFrame, parent);
         }
     
-    private void managePayment() {
+    private void managePayment(JFrame parent) {
             JFrame paymentManagementFrame = new JFrame("User Management");
             paymentManagementFrame.setSize(400, 300);
             paymentManagementFrame.setLayout(new BorderLayout());
@@ -369,15 +387,15 @@ public class Users {
             
             paymentManagementFrame.add(buttonPanel, BorderLayout.CENTER);
             
-            makePaymentButton.addActionListener(e -> makePayment());
-            searchPaymentButton.addActionListener(e -> searchPayment());
-            paymentHistoryButton.addActionListener(e -> paymentHistory());
+            makePaymentButton.addActionListener(e -> makePayment(paymentManagementFrame));
+            searchPaymentButton.addActionListener(e -> searchPayment(paymentManagementFrame));
+            paymentHistoryButton.addActionListener(e -> paymentHistory(paymentManagementFrame));
             backButton.addActionListener(e -> paymentManagementFrame.dispose());
             
-            paymentManagementFrame.setVisible(true);
+            WindowNavigation.show(paymentManagementFrame, parent);
         }
     
-    private void instructorRatings() {
+    private void instructorRatings(JFrame parent) {
             JFrame instructorRatingsFrame = new JFrame("User Management");
             instructorRatingsFrame.setSize(400, 300);
             instructorRatingsFrame.setLayout(new BorderLayout());
@@ -394,14 +412,14 @@ public class Users {
             
             instructorRatingsFrame.add(buttonPanel, BorderLayout.CENTER);
             
-            addRatingButton.addActionListener(e -> addRating());
-            viewRatingButton.addActionListener(e -> viewRating());
+            addRatingButton.addActionListener(e -> addRating(instructorRatingsFrame));
+            viewRatingButton.addActionListener(e -> viewRating(instructorRatingsFrame));
             backButton.addActionListener(e -> instructorRatingsFrame.dispose());
             
-            instructorRatingsFrame.setVisible(true);
+            WindowNavigation.show(instructorRatingsFrame, parent);
         }
     
-    private void bookClass(){
+    private void bookClass(JFrame parent){
         JFrame bookClassFrame = new JFrame("Book a Class");
         bookClassFrame.setSize(650, 500);
         bookClassFrame.setLayout(new BorderLayout());
@@ -501,10 +519,10 @@ public class Users {
             bookClassFrame.dispose();
         });
         
-        bookClassFrame.setVisible(true);
+        WindowNavigation.show(bookClassFrame, parent);
     }
     
-    private void viewClass(){
+    private void viewClass(JFrame parent){
         JFrame viewClassFrame = new JFrame("My Classes");
         viewClassFrame.setSize(650, 450);
         viewClassFrame.setLayout(new BorderLayout());
@@ -538,10 +556,10 @@ public class Users {
         if (!any) classViewArea.append("You have no active enrollments.\n");
 
         viewClassFrame.add(scroll, BorderLayout.CENTER);
-        viewClassFrame.setVisible(true);
+        WindowNavigation.show(viewClassFrame, parent);
     }
     
-    private void searchClass(){
+    private void searchClass(JFrame parent){
         JFrame searchClassFrame = new JFrame("Search for Classes");
         searchClassFrame.setSize(650, 450);
         searchClassFrame.setLayout(new BorderLayout());
@@ -582,10 +600,10 @@ public class Users {
             if (!found) classSearchArea.append("No matching classes found.\n");
         });
 
-        searchClassFrame.setVisible(true);
+        WindowNavigation.show(searchClassFrame, parent);
     }
     
-    private void rescheduleClass(){
+    private void rescheduleClass(JFrame parent){
         JFrame rescheduleClassFrame = new JFrame("Reschedule Your Classes");
         rescheduleClassFrame.setSize(500, 250);
         rescheduleClassFrame.setLayout(new GridLayout(3, 2, 10, 10));
@@ -672,10 +690,10 @@ public class Users {
             }
         });
 
-        rescheduleClassFrame.setVisible(true);
+        WindowNavigation.show(rescheduleClassFrame, parent);
     }
     
-    private void cancelClass(){
+    private void cancelClass(JFrame parent){
         JFrame cancelClassFrame = new JFrame("Cancel Class");
         cancelClassFrame.setSize(500, 200);
         cancelClassFrame.setLayout(new GridLayout(2, 2, 10, 10));
@@ -731,10 +749,10 @@ public class Users {
             }
         });
 
-        cancelClassFrame.setVisible(true);
+        WindowNavigation.show(cancelClassFrame, parent);
     }
     
-    private void makePayment(){
+    private void makePayment(JFrame parent){
         JFrame makePaymentFrame = new JFrame("Make Payment");
         makePaymentFrame.setSize(500, 300);
         makePaymentFrame.setLayout(new BorderLayout());
@@ -804,10 +822,10 @@ public class Users {
             makePaymentFrame.dispose();
         });
 
-        makePaymentFrame.setVisible(true);
+        WindowNavigation.show(makePaymentFrame, parent);
     }
     
-    private void searchPayment(){
+    private void searchPayment(JFrame parent){
         JFrame searchPaymentFrame = new JFrame("Search Payment");
         searchPaymentFrame.setSize(600, 400);
         searchPaymentFrame.setLayout(new BorderLayout());
@@ -845,10 +863,10 @@ public class Users {
             if (!found) paymentSearchArea.append("No matching payments found.\n");
         });
 
-        searchPaymentFrame.setVisible(true);
+        WindowNavigation.show(searchPaymentFrame, parent);
     }
     
-    private void paymentHistory(){
+    private void paymentHistory(JFrame parent){
         JFrame paymentHistoryFrame = new JFrame("Your Payment History");
         paymentHistoryFrame.setSize(650, 400);
         paymentHistoryFrame.setLayout(new BorderLayout());
@@ -872,10 +890,10 @@ public class Users {
         if (!any) paymentHistoryArea.append("You haven't made any payment yet.\n");
 
         paymentHistoryFrame.add(scrollPane, BorderLayout.CENTER);
-        paymentHistoryFrame.setVisible(true);
+        WindowNavigation.show(paymentHistoryFrame, parent);
     }
     
-    private void addRating(){
+    private void addRating(JFrame parent){
         JFrame addRatingFrame = new JFrame("Rate an Instructor");
         addRatingFrame.setSize(500, 400);
         addRatingFrame.setLayout(new BorderLayout());
@@ -949,10 +967,10 @@ public class Users {
             addRatingFrame.dispose();
         });
 
-        addRatingFrame.setVisible(true);
+        WindowNavigation.show(addRatingFrame, parent);
     }
     
-    private void viewRating(){
+    private void viewRating(JFrame parent){
         JFrame viewRatingFrame = new JFrame("Your Feedback History");
         viewRatingFrame.setSize(700, 400);
         viewRatingFrame.setLayout(new BorderLayout());
@@ -975,7 +993,7 @@ public class Users {
         if (!any) viewRatingArea.append("You have not submitted any ratings yet.\n");
 
         viewRatingFrame.add(scroll, BorderLayout.CENTER);
-        viewRatingFrame.setVisible(true);
+        WindowNavigation.show(viewRatingFrame, parent);
     }
     
     public void logout() {
@@ -996,6 +1014,10 @@ public class Users {
     }
     
     public void updateProfile() {
+        updateProfile(currentFrame);
+    }
+
+    private void updateProfile(JFrame parent) {
         JFrame updateFrame = new JFrame("Update Profile");
         updateFrame.setSize(400, 200);
         updateFrame.setLayout(new GridLayout(4, 2, 10, 10));
@@ -1061,7 +1083,7 @@ public class Users {
         });
 
         cancelButton.addActionListener(e -> updateFrame.dispose());
-        updateFrame.setVisible(true);
+        WindowNavigation.show(updateFrame, parent);
     }
 
     // Helper method to handle the update logic
@@ -1083,7 +1105,12 @@ public class Users {
         JButton updateButton = new JButton("Update");
 
         dialog.add(inputPanel, BorderLayout.CENTER);
-        dialog.add(updateButton, BorderLayout.SOUTH);
+        JButton backButton = new JButton("Back");
+        backButton.addActionListener(event -> dialog.dispose());
+        JPanel actions = new JPanel();
+        actions.add(updateButton);
+        actions.add(backButton);
+        dialog.add(actions, BorderLayout.SOUTH);
 
         updateButton.addActionListener(ev -> {
             String newValue = newValueField.getText().trim();

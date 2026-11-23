@@ -18,6 +18,7 @@ public class StockReportFrame extends javax.swing.JFrame {
         initComponents();
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         loadStockReport("");
+        ood.assignment.WindowNavigation.install(this);
     }
     
     private void loadStockReport(String keyword) {

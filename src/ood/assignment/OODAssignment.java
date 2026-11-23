@@ -58,13 +58,13 @@ public class OODAssignment {
             // Add action listeners
             signUpButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    userSystem.signup();
+                    userSystem.signup(frame);
                 }
             });
             
             loginButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    userSystem.login();
+                    userSystem.login(frame);
                 }
             });
             

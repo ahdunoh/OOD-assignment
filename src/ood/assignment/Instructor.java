@@ -45,7 +45,7 @@ public class Instructor extends Users {
         buttons.add(button("Report Facility Problem", () -> showFacilityReports(menu)));
         buttons.add(button("View Instructor Ratings", () -> showInstructorRatings(menu)));
         menu.add(buttons, BorderLayout.CENTER);
-        showWindow(menu, null, 400, 240);
+        showWindow(menu, navigationParent, 400, 240);
     }
 
     private void showClassSchedule(JFrame parent) {
@@ -411,7 +411,7 @@ public class Instructor extends Users {
         window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         window.setSize(width, height);
         window.setLocationRelativeTo(parent);
-        window.setVisible(true);
+        WindowNavigation.show(window, parent);
     }
 
     private static DefaultTableModel readOnlyModel(Object[][] rows, String[] columns) {

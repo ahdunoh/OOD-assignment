@@ -59,6 +59,7 @@ public class AdministratorStudentFrame extends JFrame {
         btnUpdate.addActionListener(e->updateStudent());
         btnDelete.addActionListener(e->deleteStudent());
         reload();
+        ood.assignment.WindowNavigation.install(this);
     }
     private void clear(){table.clearSelection();selectedUsername=null;
         txtId.setText("");txtUsername.setText("");txtUsername.setEditable(true);txtPassword.setText("");}

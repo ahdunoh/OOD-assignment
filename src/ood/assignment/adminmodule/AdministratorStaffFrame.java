@@ -80,6 +80,7 @@ public class AdministratorStaffFrame extends JFrame {
         btnUpdate.addActionListener(e -> performUpdate());
         btnDelete.addActionListener(e -> performDelete());
         reload();
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private void clearSelection() {

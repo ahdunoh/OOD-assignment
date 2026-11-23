@@ -21,7 +21,8 @@ public class RevenueReportFrame extends javax.swing.JFrame {
         cmbMonth.setEnabled(
         cmbReportType.getSelectedItem().toString().equals("Monthly")
     );
-}
+    ood.assignment.WindowNavigation.install(this);
+    }
 
     /**
      * This method is called from within the constructor to initialize the form.

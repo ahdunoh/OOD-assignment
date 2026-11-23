@@ -41,10 +41,11 @@ public class AdministratorDashboardFrame extends JFrame {
                 // Team login controller still owns real logout and permission changes.
             }
         });
+        ood.assignment.WindowNavigation.install(this);
     }
 
     private void showChild(JFrame frame) {
         openedFrames.add(frame);
-        frame.setVisible(true);
+        ood.assignment.WindowNavigation.show(frame, this);
     }
 }
