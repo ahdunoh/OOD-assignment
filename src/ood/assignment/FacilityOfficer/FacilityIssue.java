@@ -33,6 +33,7 @@ public class FacilityIssue extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         problemtable = new javax.swing.JTable();
         jLabel2 = new javax.swing.JLabel();
+        Uodatestatusbutton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -55,6 +56,9 @@ public class FacilityIssue extends javax.swing.JFrame {
 
         jLabel2.setText("Search");
 
+        Uodatestatusbutton.setText("Update Status");
+        Uodatestatusbutton.addActionListener(this::UodatestatusbuttonActionPerformed);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -71,7 +75,9 @@ public class FacilityIssue extends javax.swing.JFrame {
                             .addComponent(jLabel1)))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(88, 88, 88)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 311, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 311, Short.MAX_VALUE)
+                            .addComponent(Uodatestatusbutton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap(91, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -84,8 +90,10 @@ public class FacilityIssue extends javax.swing.JFrame {
                     .addComponent(searchfield, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2))
                 .addGap(31, 31, 31)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 264, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(36, Short.MAX_VALUE))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 175, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(Uodatestatusbutton)
+                .addContainerGap(128, Short.MAX_VALUE))
         );
 
         pack();
@@ -94,6 +102,24 @@ public class FacilityIssue extends javax.swing.JFrame {
     private void searchfieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchfieldActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_searchfieldActionPerformed
+
+    private void UodatestatusbuttonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_UodatestatusbuttonActionPerformed
+        // TODO add your handling code here:
+        int selectedRow = problemtable.getSelectedRow();
+
+        if (selectedRow == -1) {
+            javax.swing.JOptionPane.showMessageDialog(
+                this,
+                "Please select a facility issue."
+            );
+            return;
+        }
+
+        javax.swing.JOptionPane.showMessageDialog(
+            this,
+            "Facility issue selected."
+        );
+    }//GEN-LAST:event_UodatestatusbuttonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -121,6 +147,7 @@ public class FacilityIssue extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton Uodatestatusbutton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane1;
