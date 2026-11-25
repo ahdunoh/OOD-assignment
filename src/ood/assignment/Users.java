@@ -83,11 +83,44 @@ public class Users {
         StringBuilder digits = new StringBuilder();
         for (char ch: raw.trim().toCharArray()){
             if (Character.isDigit(ch)) digits.append(ch);
-            else break;                     // stop at first non-digit ("10 students" -> "10")
+            else break;
         }
         if (digits.length() == 0) return 0;
         try { return Integer.parseInt(digits.toString()); }
         catch (NumberFormatException e) { return 0; }
+    }
+    
+    private static double parseFee(String raw) {
+        if (raw == null) return 0;
+        StringBuilder digits = new StringBuilder();
+        boolean seenDot = false;
+        for (char ch : raw.trim().toCharArray()) {
+            if (Character.isDigit(ch)) {
+                digits.append(ch);
+            } else if (ch == '.' && !seenDot) {
+                digits.append(ch);
+                seenDot = true;
+            } else if (digits.length() > 0) {
+                break;
+            }
+        }
+        if (digits.length() == 0) return 0;
+        try { return Double.parseDouble(digits.toString()); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    private static double paidAmountFor(String username, String classId) {
+        double total = 0;
+        for (String[] p : readLinesAsRows(PAYMENT_FILE)) {
+            if (p.length >= 6
+                    && p[1].equals(username)
+                    && p[2].equals(classId)
+                    && p[5].equalsIgnoreCase("paid")) {
+                try { total += Double.parseDouble(p[3]); }
+                catch (NumberFormatException ignored) {}
+            }
+        }
+        return total;
     }
 
     private static String generateId(String prefix, String file) { //automatically generate id
@@ -764,32 +797,44 @@ public class Users {
     
     private void makePayment(JFrame parent){
         JFrame makePaymentFrame = new JFrame("Make Payment");
-        makePaymentFrame.setSize(500, 300);
+        makePaymentFrame.setSize(500, 320);
         makePaymentFrame.setLayout(new BorderLayout());
-        
+
         JPanel inputPanel = new JPanel(new GridLayout(2, 3, 10, 10));
         JTextField classIdField = new JTextField();
         JTextField amountField = new JTextField();
         JButton payButton = new JButton("Pay");
-        
+
         inputPanel.add(new JLabel("Class ID:"));
         inputPanel.add(classIdField);
         inputPanel.add(new JLabel("Amount (RM):"));
         inputPanel.add(amountField);
         inputPanel.add(new JLabel(""));
         inputPanel.add(payButton);
-        
+
         JTextArea info = new JTextArea();
         info.setEditable(false);
-        info.append("Your active enrollments:\n");
-        for (String[] en : readLinesAsRows(ENROLLMENT_FILE)) { //get price from text file
+        info.append("Your outstanding fees:\n");
+
+        boolean anyOutstanding = false;
+        for (String[] en : readLinesAsRows(ENROLLMENT_FILE)) {
             if (en.length >= 3 && en[0].equals(getUsername()) && en[2].equalsIgnoreCase("active")) {
+                String classId = en[1];
                 for (String[] c : readLinesAsRows(CLASS_FILE)) {
-                    if (c.length >= 7 && c[0].equals(en[1])) {
-                        info.append(" - " + c[0] + " (" + c[1] + ") : RM " + c[6] + "\n");
+                    if (c.length >= 7 && c[0].equals(classId)) {
+                        double fee = parseFee(c[6]);
+                        double paid = paidAmountFor(getUsername(), classId);
+                        double remaining = fee - paid;
+                        if (remaining > 0.005) { // still owes
+                            info.append(" - " + c[0] + " (" + c[1] + ") : Fee RM " + String.format("%.2f", fee) + " | Paid RM " + String.format("%.2f", paid) + " | Remaining RM " + String.format("%.2f", remaining) + "\n");
+                            anyOutstanding = true;
+                        }
                     }
                 }
             }
+        }
+        if (!anyOutstanding) {
+            info.append("No outstanding fees. All enrolled classes are fully paid.\n");
         }
 
         makePaymentFrame.add(new JScrollPane(info), BorderLayout.CENTER);
@@ -807,8 +852,20 @@ public class Users {
                 JOptionPane.showMessageDialog(makePaymentFrame, "You are not enrolled in class " + classId);
                 return;
             }
+
+            String[] targetClass = null;
+            for (String[] c : readLinesAsRows(CLASS_FILE)) {
+                if (c.length >= 7 && c[0].equals(classId)) { targetClass = c; break; }
+            }
+            if (targetClass == null) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "Class not found.");
+                return;
+            }
+
+            double fee;
             double amount;
             try {
+                fee = parseFee(targetClass[6]);
                 amount = Double.parseDouble(amountStr);
                 if (amount <= 0) throw new NumberFormatException();
             } catch (NumberFormatException ex) {
@@ -816,19 +873,37 @@ public class Users {
                 return;
             }
 
+            double paid = paidAmountFor(getUsername(), classId);
+            double remaining = fee - paid;
+
+            if (remaining <= 0.005) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "This class is already fully paid (RM " + String.format("%.2f", fee) + ").");
+                return;
+            }
+            if (amount > remaining + 0.005) {
+                JOptionPane.showMessageDialog(makePaymentFrame, "Amount exceeds remaining balance. Remaining: RM " + String.format("%.2f", remaining));
+                return;
+            }
+
             String paymentId = generateId("P", PAYMENT_FILE);
             String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
 
             try (BufferedWriter w = new BufferedWriter(new FileWriter(PAYMENT_FILE, true))) {
-                w.write(String.format("%s, %s, %s, %.2f, %s, paid",
-                        paymentId, getUsername(), classId, amount, date));
+                w.write(String.format("%s, %s, %s, %.2f, %s, paid", paymentId, getUsername(), classId, amount, date));
                 w.newLine();
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(makePaymentFrame, "Error saving payment: " + ex.getMessage());
                 return;
             }
 
-            JOptionPane.showMessageDialog(makePaymentFrame, "Payment " + paymentId + " of RM " + String.format("%.2f", amount) + " recorded.");
+            double newRemaining = remaining - amount;
+            String msg = "Payment " + paymentId + " of RM " + String.format("%.2f", amount) + " recorded.";
+            if (newRemaining <= 0.005) {
+                msg += "\nClass " + classId + " is now fully paid.";
+            } else {
+                msg += "\nRemaining balance for " + classId + ": RM " + String.format("%.2f", newRemaining);
+            }
+            JOptionPane.showMessageDialog(makePaymentFrame, msg);
             makePaymentFrame.dispose();
         });
 
@@ -845,6 +920,7 @@ public class Users {
         JButton searchButton = new JButton("Search");
         top.add(new JLabel("Payment ID or Class ID:"));
         top.add(searchField);
+        top.add(searchButton);
         
         JTextArea paymentSearchArea = new JTextArea();
         paymentSearchArea.setEditable(false);
@@ -856,7 +932,7 @@ public class Users {
         searchButton.addActionListener(e -> {
             String term = searchField.getText().trim();
             paymentSearchArea.setText("");
-            paymentSearchArea.append(String.format("%-10s %-10s %-10s %-10s %-12s %-8s%n",
+            paymentSearchArea.append(String.format("%-10s %-10s %-10s %-12s %-10s %-10s%n",
                     "PayID", "ClassID", "Amount", "Date", "Status", "User"));
             paymentSearchArea.append("---------------------------------------------------------------\n");
 
@@ -878,26 +954,46 @@ public class Users {
     
     private void paymentHistory(JFrame parent){
         JFrame paymentHistoryFrame = new JFrame("Your Payment History");
-        paymentHistoryFrame.setSize(650, 400);
+        paymentHistoryFrame.setSize(650, 450);
         paymentHistoryFrame.setLayout(new BorderLayout());
 
         JTextArea paymentHistoryArea = new JTextArea();
         paymentHistoryArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(paymentHistoryArea);
-        
+
         paymentHistoryArea.append("=== YOUR PAYMENT HISTORY ===\n");
-        paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n", "PayID", "ClassID", "Amount", "Date", "Status"));
-        paymentHistoryArea.append("-----------------------------------------------------\\n");
+        paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n",
+                "PayID", "ClassID", "Amount", "Date", "Status"));
+        paymentHistoryArea.append("-----------------------------------------------------\n");
 
         boolean any = false;
+        Set<String> classesTouched = new LinkedHashSet<>();
         for (String[] p : readLinesAsRows(PAYMENT_FILE)) {
             if (p.length >= 6 && p[1].equals(getUsername())) {
-                paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n",
-                        p[0], p[2], p[3], p[4], p[5]));
+                paymentHistoryArea.append(String.format("%-10s %-10s %-10s %-12s %-8s%n", p[0], p[2], p[3], p[4], p[5]));
+                classesTouched.add(p[2]);
                 any = true;
             }
         }
-        if (!any) paymentHistoryArea.append("You haven't made any payment yet.\n");
+        if (!any) {
+            paymentHistoryArea.append("You haven't made any payment yet.\n");
+        } else {
+            paymentHistoryArea.append("\n=== BALANCE PER CLASS ===\n");
+            for (String classId : classesTouched) {
+                String className = classId;
+                double fee = 0;
+                for (String[] c : readLinesAsRows(CLASS_FILE)) {
+                    if (c.length >= 7 && c[0].equals(classId)) {
+                        className = c[1];
+                        fee = parseFee(c[6]);
+                        break;
+                    }
+                }
+                double paid = paidAmountFor(getUsername(), classId);
+                double remaining = Math.max(0, fee - paid);
+                paymentHistoryArea.append(String.format( " - %s (%s): Fee RM %.2f | Paid RM %.2f | Remaining RM %.2f%n", classId, className, fee, paid, remaining));
+            }
+        }
 
         paymentHistoryFrame.add(scrollPane, BorderLayout.CENTER);
         WindowNavigation.show(paymentHistoryFrame, parent);
@@ -939,13 +1035,11 @@ public class Users {
 
             try {
                 if (!new AttendanceService().canRate(getUsername(), classId)) {
-                    JOptionPane.showMessageDialog(addRatingFrame,
-                            "You can rate a class after the Attendance Officer marks you Present or Late.");
+                    JOptionPane.showMessageDialog(addRatingFrame, "You can rate a class after the Attendance Officer marks you Present or Late.");
                     return;
                 }
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(addRatingFrame,
-                        "Could not verify your attendance: " + ex.getMessage());
+                JOptionPane.showMessageDialog(addRatingFrame, "Could not verify your attendance: " + ex.getMessage());
                 return;
             }
 
@@ -964,9 +1058,7 @@ public class Users {
             String date = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
 
             try (BufferedWriter w = new BufferedWriter(new FileWriter(RATING_FILE, true))) {
-                w.write(String.format("%s, %s, %s, %s, %d, %s, %s",
-                        ratingId, getUsername(), instructor, classId, rating,
-                        comment.isEmpty() ? "-" : comment, date));
+                w.write(String.format("%s, %s, %s, %s, %d, %s, %s", ratingId, getUsername(), instructor, classId, rating, comment.isEmpty() ? "-" : comment, date));
                 w.newLine();
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(addRatingFrame, "Error saving rating: " + ex.getMessage());
@@ -995,8 +1087,7 @@ public class Users {
         boolean any = false;
         for (String[] r : readLinesAsRows(RATING_FILE)) {
             if (r.length >= 7 && r[1].equals(getUsername())) {
-                viewRatingArea.append(String.format("%-8s %-10s %-15s %-10s %-8s %-25s %-12s%n",
-                        r[0], r[3], r[2], r[4], "", r[5], r[6]));
+                viewRatingArea.append(String.format("%-8s %-10s %-15s %-10s %-8s %-25s %-12s%n", r[0], r[3], r[2], r[4], "", r[5], r[6]));
                 any = true;
             }
         }
